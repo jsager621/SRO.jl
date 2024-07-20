@@ -6,6 +6,7 @@ version = "0.1.0"
 
 [deps]
 GenericFFT = "a8297547-1b15-4a5a-a998-a2ac5f1cef28"
+InvertedIndices = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
 OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
