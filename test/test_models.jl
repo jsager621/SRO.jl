@@ -1,5 +1,4 @@
 using SRO
-using OffsetArrays
 
 @testset "DiscreteResource" begin
     # constructor tests
@@ -28,23 +27,23 @@ using OffsetArrays
     c = [1.0, 2.0, 3.0]
     r = DiscreteResource(p, c)
 
-    @test r.v == OffsetVector([0,1,2], 0:2)
+    @test r.v == [0,1,2]
     @test r.max_value == 2
-    @test r[1] == (0.3, 2.0, 1)
+    @test r[2] == (0.3, 2.0, 1)
     @test length(r) == 3
 
     # cdf
-    @test isapprox(cdf(r), OffsetVector([0.3, 0.6, 1.0], 0:2))
+    @test isapprox(cdf(r), [0.3, 0.6, 1.0])
 
     # ccdf
-    @test isapprox(ccdf(r), OffsetVector([0.7, 0.4, 0.0], 0:2))
+    @test isapprox(ccdf(r), [0.7, 0.4, 0.0])
 
     # adding resources
     c1 = DiscreteResource([0.2, 0.4, 0.4], [0.0, -1.0, -2.0])
     c2 = DiscreteResource([0.2, 0.4, 0.4], [0.0, -2.0, -4.0])
     c3 = add(c1, c2)
 
-    expected_cost = OffsetVector([0.0, -1.5, -3.0, -4.5, -6.0], 0:4)
+    expected_cost = [0.0, -1.5, -3.0, -4.5, -6.0]
     @test isapprox(c3.c, expected_cost; rtol = 0.0000001)
 
     res_v = [c1, c2, c1, c2]

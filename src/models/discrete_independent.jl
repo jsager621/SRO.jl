@@ -11,9 +11,9 @@ The probability vector __p__ and cost vector __c__ must be of equal length.
 """
 struct DiscreteResource{T<:AbstractFloat}
     max_value::Int64
-    p::OffsetVector{T}
-    c::OffsetVector{T}
-    v::OffsetVector{T}
+    p::Vector{T}
+    c::Vector{T}
+    v::Vector{T}
 
     function DiscreteResource(prob::Vector{T}, cost::Vector{T}) where {T<:AbstractFloat}
         if length(prob) != length(cost)
@@ -25,12 +25,9 @@ struct DiscreteResource{T<:AbstractFloat}
         end
 
         max_value = length(prob) - 1
+        v = collect(0:max_value)
 
-        p = OffsetVector(prob, 0:max_value)
-        c = OffsetVector(cost, 0:max_value)
-        v = OffsetVector(collect(0:max_value), 0:max_value)
-
-        return new{T}(max_value, p, c, v)
+        return new{T}(max_value, prob, cost, v)
     end
 end
 
@@ -42,33 +39,33 @@ function Base.length(r::DiscreteResource)
     return length(r.p)
 end
 
-function cdf(r::DiscreteResource{T})::OffsetVector{T} where T
-    return OffsetVector(cumsum(r.p), 0:length(r)-1)
+function cdf(r::DiscreteResource{T})::Vector{T} where T
+    return cumsum(r.p)
 end
 
-function ccdf(r::DiscreteResource{T})::OffsetVector{T} where T
+function ccdf(r::DiscreteResource{T})::Vector{T} where T
     return [1 - n for n in cdf(r)]
 end
 
-function convolve(a::OffsetVector{T, Vector{T}}, b::OffsetVector{T, Vector{T}})::OffsetVector{T, Vector{T}} where {T <: AbstractFloat}
+function convolve(a::Vector{T}, b::Vector{T})::Vector{T} where {T <: AbstractFloat}
     n = length(a)
     m = length(b)
 
-    a_pad = [no_offset_view(a); zeros(m - 1)]
-    b_pad = [no_offset_view(b); zeros(n - 1)]
+    a_pad = [a; zeros(m - 1)]
+    b_pad = [b; zeros(n - 1)]
 
     raw_convolve = ifft(fft(a_pad) .* fft(b_pad))
     reals = [real(x) for x in raw_convolve]
     filtered = [x < 0 ? T(0.0) : x for x in reals]
 
-    return OffsetVector(filtered, 0:length(filtered)-1)
+    return filtered
 end
 
-function convolve(vs::Vector{OffsetVector{T, Vector{T}}})::OffsetVector{T, Vector{T}} where {T <: AbstractFloat}
+function convolve(vs::Vector{Vector{T}})::Vector{T} where {T <: AbstractFloat}
     final_length = sum([length(x) for x in vs]) - length(vs) + 1
     paddeds = Vector{Vector{T}}()
     for v in vs
-        push!(paddeds, [no_offset_view(v); zeros(T, final_length - length(v))])
+        push!(paddeds, [v; zeros(T, final_length - length(v))])
     end
 
     ffts = [fft(x) for x in paddeds]
@@ -76,7 +73,7 @@ function convolve(vs::Vector{OffsetVector{T, Vector{T}}})::OffsetVector{T, Vecto
     reals = [real(x) for x in raw_convolve]
     filtered = [x < 0 ? T(0.0) : x for x in reals]
 
-    return OffsetVector(filtered, 0:length(filtered)-1)
+    return filtered
 end
 
 function add(a::DiscreteResource{T}, b::DiscreteResource{T})::DiscreteResource{T} where T
