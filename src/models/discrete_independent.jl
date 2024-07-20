@@ -13,15 +13,29 @@ struct DiscreteResource{T<:AbstractFloat}
     c::OffsetVector{T}
     v::OffsetVector{T}
 
-    function DiscreteResource(prob::Vector{T}, cost::Vector{T})
+    function DiscreteResource(prob::Vector{T}, cost::Vector{T}) where {T<:AbstractFloat}
+        if length(prob) != length(cost)
+            throw(ArgumentError("Probabililty and cost vector must have equal length!"))
+        end
+
+        if !isapprox(sum(prob), 1.0)
+            throw(ArgumentError("Probabilities must add up to 1!"))
+        end
+
         max_value = length(prob) - 1
-        @assert length(prob) == length(costs) "Probabililty and cost vector must have equal length!"
-        @assert isapprox(sum(prob), 1.0) "Probabilities must add up to 1!"
 
         p = OffsetVector(prob, 0:max_value)
         c = OffsetVector(cost, 0:max_value)
         v = OffsetVector(collect(0:max_value), 0:max_value)
 
-        return new(max_value, p, c, v)
+        return new{T}(max_value, p, c, v)
     end
+end
+
+function Base.getindex(r::DiscreteResource, k)
+    return (r.p[k], r.c[k], r.v[k])
+end
+
+function Base.length(r::DiscreteResource)
+    return length(r.p)
 end
