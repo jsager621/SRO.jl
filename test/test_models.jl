@@ -1,4 +1,5 @@
 using SRO
+using Random
 
 @testset "DiscreteResource" begin
     # constructor tests
@@ -54,6 +55,24 @@ using SRO
 
 end
 
-@testset "DiscreteProblem" begin
+@testset "DiscreteInstances" begin
+    # constructor tests
+    c1 = DiscreteResource([0.2, 0.4, 0.4], [0.0, -1.0, -2.0])
+    c2 = DiscreteResource([0.2, 0.4, 0.4], [0.0, -2.0, -4.0])
+    problem = DiscreteProblem(
+        [c1, c2],
+        0.5,
+        10
+    )
 
+    n_instances = 100
+
+    inst = DiscreteInstances(
+        problem,
+        n_instances
+    )
+
+    @test length(inst.rolled_values) == 2
+    @test length(inst.rolled_values[1]) == n_instances
+    @test length(inst.rolled_values[2]) == n_instances
 end

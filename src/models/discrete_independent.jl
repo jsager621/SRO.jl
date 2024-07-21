@@ -1,8 +1,10 @@
-using OffsetArrays
-import OffsetArrays: no_offset_view
 using GenericFFT
 using InvertedIndices
+using Random
 
+#---------------------------------------
+# Resource Definition and Functions
+#---------------------------------------
 """
 Discrete and independent SRO resource model. 
 All values are defined from 0 to the maximum value. 
@@ -77,16 +79,16 @@ function convolve(vs::Vector{Vector{T}})::Vector{T} where {T <: AbstractFloat}
 end
 
 function add(a::DiscreteResource{T}, b::DiscreteResource{T})::DiscreteResource{T} where T
-    f3 = no_offset_view(convolve(a.p, b.p))
+    f3 = convolve(a.p, b.p)
     
     n = length(a)
     m = length(b)
 
-    f1_pad = [no_offset_view(a.p); zeros(m - 1)]
-    f2_pad = [no_offset_view(b.p); zeros(n - 1)]
+    f1_pad = [a.p; zeros(m - 1)]
+    f2_pad = [b.p; zeros(n - 1)]
 
-    c1_pad = [no_offset_view(a.c); zeros(m - 1)]
-    c2_pad = [no_offset_view(b.c); zeros(n - 1)]
+    c1_pad = [a.c; zeros(m - 1)]
+    c2_pad = [b.c; zeros(n - 1)]
 
     w1 = f2_pad .* c2_pad
     w2 = f1_pad .* c1_pad
@@ -104,15 +106,15 @@ end
 
 function add(resources::Vector{DiscreteResource{T}})::DiscreteResource{T} where T
     final_length = sum([length(x) for x in resources]) - length(resources) + 1
-    f3 = no_offset_view(convolve([res.p for res in resources]))
+    f3 = convolve([res.p for res in resources])
 
-    f_paddeds = Vector{Vector{BigFloat}}()
-    c_paddeds = Vector{Vector{BigFloat}}()
+    f_paddeds = Vector{Vector{T}}()
+    c_paddeds = Vector{Vector{T}}()
     weights = Vector{Vector{T}}()
 
     for res in resources
-        new_f_pad = [no_offset_view(res.p); zeros(T, final_length - length(res))]
-        new_c_pad = [no_offset_view(res.c); zeros(T, final_length - length(res))]
+        new_f_pad = [res.p; zeros(T, final_length - length(res))]
+        new_c_pad = [res.c; zeros(T, final_length - length(res))]
         push!(f_paddeds, new_f_pad)
         push!(c_paddeds, new_c_pad)
         push!(weights, new_f_pad .* new_c_pad)
@@ -131,4 +133,46 @@ function add(resources::Vector{DiscreteResource{T}})::DiscreteResource{T} where 
     c3 = real_cost ./ f3
 
     return DiscreteResource(f3, c3)
+end
+
+#---------------------------------------
+# Problem Definition
+#---------------------------------------
+"""
+SRO problem consisting of a set of independent discrete __resources__,
+a probability target __p_target__ and a value target __v_target__.
+"""
+struct DiscreteProblem
+    resources::Vector{DiscreteResource}
+    p_target::Float64
+    v_target::Float64
+end
+
+#---------------------------------------
+# Instances Definition
+#---------------------------------------
+"""
+Set of concrete instances of an SRO __problem__.
+The constructor rolls __n_instances__ values using the given __rng__ by the
+distributions of the problem resources.
+"""
+struct DiscreteInstances
+    problem::DiscreteProblem
+    rolled_values::Vector{Vector{Int64}}
+
+    function DiscreteInstances(rng::AbstractRNG, problem::DiscreteProblem, n_instances::Int64)
+        output = Vector{Vector{Int64}}()
+
+        for res in problem.resources
+            rands = rand(rng, n_instances)
+            cumu = cdf(res)
+            values = [findfirst(n->n>=x, cumu) for x in rands]
+            push!(output, values)
+        end
+        return new(problem, output)
+    end
+
+    function DiscreteInstances(problem::DiscreteProblem, n_instances::Int64)
+        return DiscreteInstances(Xoshiro(), problem, n_instances)
+    end
 end

@@ -5,7 +5,7 @@ include("utils/utils.jl")
 # models
 include("models/copula_correlated.jl")
 include("models/discrete_independent.jl")
-export DiscreteResource, cdf, ccdf, add
+export DiscreteResource, cdf, ccdf, add, DiscreteProblem, DiscreteInstances
 
 # solvers
 include("solvers/copula_correlated/fk_fitting.jl")
