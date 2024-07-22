@@ -5,6 +5,7 @@ repo = "https://github.com/jsagerOffis/SRO"
 version = "0.1.0"
 
 [deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 GenericFFT = "a8297547-1b15-4a5a-a998-a2ac5f1cef28"
 InvertedIndices = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
 OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"

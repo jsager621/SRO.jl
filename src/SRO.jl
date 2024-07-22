@@ -1,4 +1,9 @@
 module SRO
+
+# avoid name collisions with packages used here
+using Distributions
+import Distributions: cdf, ccdf
+
 # utils
 include("utils/utils.jl")
 
