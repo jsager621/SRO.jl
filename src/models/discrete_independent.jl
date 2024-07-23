@@ -8,8 +8,8 @@ using Random
 """
 Discrete and independent SRO resource model. 
 All values are defined from 0 to the maximum value. 
-The value vector __v__ is mapped to the indices of the probability vector.
-The probability vector __p__ and cost vector __c__ must be of equal length.
+The value vector `v` is mapped to the indices of the probability vector.
+The probability vector `p` and cost vector `c` must be of equal length.
 """
 struct DiscreteResource{T<:AbstractFloat}
     max_value::Int64
@@ -139,8 +139,8 @@ end
 # Problem Definition
 #---------------------------------------
 """
-SRO problem consisting of a set of independent discrete __resources__,
-a probability target __p_target__ and a value target __v_target__.
+SRO problem consisting of a set of independent discrete `resources`,
+a probability target `p_target` and a value target `v_target`.
 """
 struct DiscreteProblem
     resources::Vector{DiscreteResource}
@@ -152,8 +152,8 @@ end
 # Instances Definition
 #---------------------------------------
 """
-Set of concrete instances of an SRO __problem__.
-The constructor rolls __n_instances__ values using the given __rng__ by the
+Set of concrete instances of an SRO `problem`.
+The constructor rolls `n_instances` values using the given `rng` by the
 distributions of the problem resources.
 """
 struct DiscreteInstances
@@ -175,4 +175,22 @@ struct DiscreteInstances
     function DiscreteInstances(problem::DiscreteProblem, n_instances::Int64)
         return DiscreteInstances(Xoshiro(), problem, n_instances)
     end
+end
+
+#---------------------------------------
+# Solution Definition
+#---------------------------------------
+"""
+Solution structure for a discrete SRO `problem`. Encapsulates different ways to give the solution:
+* `resource_indices` - vector of indices of the optimal solution resources as in the `problem.resources` vector
+* `resources` - vector of the optimal resources
+* `probability` - sum probability of the solution resource set at the target value
+* `cost` - expected costs of the solution resource set at the target value
+"""
+struct DiscreteSolution
+    problem::DiscreteProblem
+    resource_indices::Vector{Int64}
+    resources::Vector{DiscreteResource}
+    probability::Float64
+    cost::Float64
 end
