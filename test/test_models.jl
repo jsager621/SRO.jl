@@ -28,7 +28,7 @@ using Random
     c = [1.0, 2.0, 3.0]
     r = DiscreteResource(p, c)
 
-    @test r.v == [0,1,2]
+    @test r.v == [0, 1, 2]
     @test r.max_value == 2
     @test r[2] == (0.3, 2.0, 1)
     @test length(r) == 3
@@ -50,29 +50,51 @@ using Random
     res_v = [c1, c2, c1, c2]
     c3 = add(res_v)
     c3_man = add(add(add(c1, c2), c1), c2)
-    @test isapprox(c3.p , c3_man.p; rtol = 0.0000001)
-    @test isapprox(c3.c , c3_man.c; rtol = 0.0000001)
+    @test isapprox(c3.p, c3_man.p; rtol = 0.0000001)
+    @test isapprox(c3.c, c3_man.c; rtol = 0.0000001)
 
 end
 
 @testset "DiscreteInstances" begin
     # constructor tests
-    c1 = DiscreteResource([0.2, 0.4, 0.4], [0.0, -1.0, -2.0])
-    c2 = DiscreteResource([0.2, 0.4, 0.4], [0.0, -2.0, -4.0])
-    problem = DiscreteProblem(
-        [c1, c2],
-        0.5,
-        10
-    )
+    c1_cost = [0.0, -1.0, -2.0]
+    c2_cost = [0.0, -2.0, -4.0]
+    c1 = DiscreteResource([0.2, 0.4, 0.4], c1_cost)
+    c2 = DiscreteResource([0.2, 0.4, 0.4], c2_cost)
+    problem = DiscreteProblem([c1, c2], 0.5, 10.0)
 
     n_instances = 100
 
-    inst = DiscreteInstances(
-        problem,
-        n_instances
-    )
+    inst = DiscreteInstances(problem, n_instances)
 
-    @test length(inst.rolled_values) == 2
-    @test length(inst.rolled_values[1]) == n_instances
-    @test length(inst.rolled_values[2]) == n_instances
+    # correct output formats
+    @test length(inst.values) == 2
+    @test length(inst.values[1]) == n_instances
+    @test length(inst.values[2]) == n_instances
+
+    @test length(inst.costs) == 2
+    @test length(inst.costs[1]) == n_instances
+    @test length(inst.costs[2]) == n_instances
+
+    # correct cost content
+    @test all([
+        inst.costs[1][i] == c1_cost[inst.values[1][i]] for i in eachindex(inst.values[1])
+    ])
+    @test all([
+        inst.costs[2][i] == c2_cost[inst.values[2][i]] for i in eachindex(inst.values[2])
+    ])
+end
+
+@testset "ContinuousResource" begin
+    # constructor tests
+
+    # rolling values
+
+
+end
+
+@testset "GaussianCopulaResources" begin
+    # constructor
+
+    # functions
 end

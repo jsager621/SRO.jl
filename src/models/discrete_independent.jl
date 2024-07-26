@@ -8,7 +8,8 @@ using Random
 """
 Discrete and independent SRO resource model. 
 All values are defined from 0 to the maximum value. 
-The value vector `v` is mapped to the indices of the probability vector.
+The value vector `v` is mapped to the indices of the probability vector with an offset of -1
+so the first probability in `p` is the probability of getting value 0, etc.
 The probability vector `p` and cost vector `c` must be of equal length.
 """
 struct DiscreteResource{T<:AbstractFloat}
@@ -41,15 +42,15 @@ function Base.length(r::DiscreteResource)
     return length(r.p)
 end
 
-function cdf(r::DiscreteResource{T})::Vector{T} where T
+function cdf(r::DiscreteResource{T})::Vector{T} where {T}
     return cumsum(r.p)
 end
 
-function ccdf(r::DiscreteResource{T})::Vector{T} where T
+function ccdf(r::DiscreteResource{T})::Vector{T} where {T}
     return [1 - n for n in cdf(r)]
 end
 
-function convolve(a::Vector{T}, b::Vector{T})::Vector{T} where {T <: AbstractFloat}
+function convolve(a::Vector{T}, b::Vector{T})::Vector{T} where {T<:AbstractFloat}
     n = length(a)
     m = length(b)
 
@@ -63,7 +64,7 @@ function convolve(a::Vector{T}, b::Vector{T})::Vector{T} where {T <: AbstractFlo
     return filtered
 end
 
-function convolve(vs::Vector{Vector{T}})::Vector{T} where {T <: AbstractFloat}
+function convolve(vs::Vector{Vector{T}})::Vector{T} where {T<:AbstractFloat}
     final_length = sum([length(x) for x in vs]) - length(vs) + 1
     paddeds = Vector{Vector{T}}()
     for v in vs
@@ -71,16 +72,16 @@ function convolve(vs::Vector{Vector{T}})::Vector{T} where {T <: AbstractFloat}
     end
 
     ffts = [fft(x) for x in paddeds]
-    raw_convolve = ifft(reduce((x,y) -> x .* y, ffts))
+    raw_convolve = ifft(reduce((x, y) -> x .* y, ffts))
     reals = [real(x) for x in raw_convolve]
     filtered = [x < 0 ? T(0.0) : x for x in reals]
 
     return filtered
 end
 
-function add(a::DiscreteResource{T}, b::DiscreteResource{T})::DiscreteResource{T} where T
+function add(a::DiscreteResource{T}, b::DiscreteResource{T})::DiscreteResource{T} where {T}
     f3 = convolve(a.p, b.p)
-    
+
     n = length(a)
     m = length(b)
 
@@ -104,7 +105,7 @@ function add(a::DiscreteResource{T}, b::DiscreteResource{T})::DiscreteResource{T
     return DiscreteResource(f3, c3)
 end
 
-function add(resources::Vector{DiscreteResource{T}})::DiscreteResource{T} where T
+function add(resources::Vector{DiscreteResource{T}})::DiscreteResource{T} where {T}
     final_length = sum([length(x) for x in resources]) - length(resources) + 1
     f3 = convolve([res.p for res in resources])
 
@@ -142,8 +143,8 @@ end
 SRO problem consisting of a set of independent discrete `resources`,
 a probability target `p_target` and a value target `v_target`.
 """
-struct DiscreteProblem
-    resources::Vector{DiscreteResource}
+struct DiscreteProblem{T<:AbstractFloat}
+    resources::Vector{DiscreteResource{T}}
     p_target::Float64
     v_target::Float64
 end
@@ -156,20 +157,30 @@ Set of concrete instances of an SRO `problem`.
 The constructor rolls `n_instances` values using the given `rng` by the
 distributions of the problem resources.
 """
-struct DiscreteInstances
-    problem::DiscreteProblem
-    rolled_values::Vector{Vector{Int64}}
+struct DiscreteInstances{T<:AbstractFloat}
+    problem::DiscreteProblem{T}
+    values::Vector{Vector{Int64}}
+    costs::Vector{Vector{T}}
 
-    function DiscreteInstances(rng::AbstractRNG, problem::DiscreteProblem, n_instances::Int64)
-        output = Vector{Vector{Int64}}()
+    function DiscreteInstances(
+        rng::AbstractRNG,
+        problem::DiscreteProblem{T},
+        n_instances::Int64,
+    ) where {T<:AbstractFloat}
+        values = Vector{Vector{Int64}}()
+        costs = Vector{Vector{T}}()
 
         for res in problem.resources
             rands = rand(rng, n_instances)
             cumu = cdf(res)
-            values = [findfirst(n->n>=x, cumu) for x in rands]
-            push!(output, values)
+
+            v = [findfirst(n -> n >= x, cumu) for x in rands]
+            push!(values, v)
+
+            c = [res.c[x] for x in v]
+            push!(costs, c)
         end
-        return new(problem, output)
+        return new{T}(problem, values, costs)
     end
 
     function DiscreteInstances(problem::DiscreteProblem, n_instances::Int64)
