@@ -1,5 +1,6 @@
 using SRO
 using Random
+using Distributions
 
 @testset "DiscreteResource" begin
     # constructor tests
@@ -87,14 +88,49 @@ end
 
 @testset "ContinuousResource" begin
     # constructor tests
+    not_ok_rv = Normal(5,5)
+    ok_rv = truncated(Normal(5,5); lower=0, upper=5)
+    ok_cost(x::Float64)::Float64 = x^2
+
+    @test_throws ArgumentError ContinuousResource(not_ok_rv, ok_cost)
+    res = ContinuousResource(ok_rv, ok_cost)
 
     # rolling values
+    values, costs = roll_values(res, 10)
+    @test length(values) == 10
+    @test length(costs) == 10
+    @test all([x>=0 for x in values])
+    @test all([x<=5 for x in values])
+    @test all([ok_cost(values[i]) == costs[i] for i in eachindex(values)])
 
-
+    values, costs = roll_values(Xoshiro(1), res, 10)
+    @test length(values) == 10
+    @test length(costs) == 10
+    @test all([x>=0 for x in values])
+    @test all([x<=5 for x in values])
+    @test all([ok_cost(values[i]) == costs[i] for i in eachindex(values)])
 end
 
-@testset "GaussianCopulaResources" begin
+@testset "GaussianCopulaSet" begin
     # constructor
+    raw_rvs = [Normal(5,5), Beta(1.5, 1.5), Weibull(1.5, 1.5)]
+    rvs = [truncated(x; lower=0, upper=1) for x in raw_rvs]
+    resources = [ContinuousResource(x, y->y^2) for x in rvs]
+
+    cov_mat = [
+        1.0 0.5 0.5
+        0.5 1.0 0.5
+        0.5 0.5 1.0
+    ]
+
+    s = GaussianCopulaSet(resources, cov_mat)
+    @test true
 
     # functions
+    values, costs = roll_value_set(s, 10)
+    @test all([values[i]^2 == costs[i] for i in eachindex(values)])
+
+    values, costs = roll_value_set(Xoshiro(1), s, 10)
+    @test all([values[i]^2 == costs[i] for i in eachindex(values)])
+
 end

@@ -32,10 +32,6 @@ struct ContinuousResource
             )
         end
 
-        if !hasmethod(c, Tuple{AbstractFloat,AbstractFloat})
-            throw(ArgumentError("Cost function must have a method from Float to Float!"))
-        end
-
         return new(v, c, v.lower, v.upper)
     end
 end
@@ -67,7 +63,7 @@ function roll_values(
     n_values::Int64,
 )::Tuple{Vector{Float64},Vector{Float64}}
     values = rand(rng, r.v, n_values)
-    costs = [r.c(x) for x in r.v]
+    costs = [r.c(x) for x in values]
     return values, costs
 end
 
@@ -75,19 +71,19 @@ end
 """
 Universal parent type for sets of correlated continuous resources.
 """
-abstract type CorrelatedResources end
+abstract type ResourceSet end
 
 """
 Parent type for a set of resources with some specified correlation given by a Copula.
 """
-abstract type CopulaResources <: CorrelatedResources end
+abstract type CopulaSet <: ResourceSet end
 
 """
 Set of continuous `resources`` with known correlation given by a gaussian copula.
 `distribution` contains the multivariate distribution of the set.
 `copula` contains the gaussian copula created by the `cov_mat`.
 """
-struct GaussianCopulaSet <: CopulaResources
+struct GaussianCopulaSet <: CopulaSet
     resources::Vector{ContinuousResource}
     cov_mat::Matrix{Float64}
     copula::GaussianCopula
@@ -117,7 +113,7 @@ function roll_value_set(
     n_values::Int64,
 )::Tuple{Matrix{Float64},Matrix{Float64}}
     rng = Xoshiro()
-    return roll_values(rng, set, n_values)
+    return roll_value_set(rng, set, n_values)
 end
 
 """
@@ -154,7 +150,7 @@ SRO problem consisting of a set of correlated continuous `resources`,
 a probability target `p_target` and a value target `v_target`.
 """
 struct CorrelatedProblem
-    resources::CorrelatedResources
+    resources::ResourceSet
     p_target::Float64
     v_target::Float64
 end

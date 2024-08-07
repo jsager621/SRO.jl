@@ -13,9 +13,8 @@ include("utils/utils.jl")
 # continuous
 include("models/continuous_correlated.jl")
 export ContinuousResource, roll_values
-export GaussianCopulaResources, roll_value_set
-export CorrelatedResources,
-    CopulaResources, CorrelatedProblem, CorrelatedInstances, CorrelatedSolution
+export GaussianCopulaSet, roll_value_set
+export ResourceSet, CopulaSet, CorrelatedProblem, CorrelatedInstances, CorrelatedSolution
 
 # discrete
 include("models/discrete_independent.jl")
