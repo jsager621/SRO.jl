@@ -18,8 +18,9 @@ export ResourceSet, CopulaSet, CorrelatedProblem, CorrelatedInstances, Correlate
 
 # discrete
 include("models/discrete_independent.jl")
-export DiscreteResource, cdf, ccdf, add
+export DiscreteResource, cdf, ccdf, add, ZERO_RESOURCE
 export DiscreteProblem, DiscreteInstances, DiscreteSolution
+export sro_target_function
 
 #---------------------------
 # Solvers
@@ -33,6 +34,8 @@ include("solvers/continuous_correlated/oracle.jl")
 include("solvers/discrete_independent/metaheuristics.jl")
 include("solvers/discrete_independent/optimal.jl")
 include("solvers/discrete_independent/simple_heuristics.jl")
-export aco, bpso, discreteOptimum
+include("solvers/discrete_independent/distributed.jl")
+export aco, discreteOptimum
+export bpso, BPSOArgs
 
 end

@@ -1,7 +1,3 @@
-using SRO
-using Random
-using Distributions
-
 @testset "DiscreteResource" begin
     # constructor tests
     # type consistency
@@ -54,6 +50,28 @@ using Distributions
     @test isapprox(c3.p, c3_man.p; rtol = 0.0000001)
     @test isapprox(c3.c, c3_man.c; rtol = 0.0000001)
 
+
+    # target function
+    p_target = 0.5
+    v_target = 2
+
+    c1 = DiscreteResource([0.2, 0.4, 0.4], [0.0, -1.0, -2.0])
+    c2 = DiscreteResource([0.2, 0.4, 0.4], [0.0, -2.0, -4.0])
+
+    # p of at least 1 is 96%
+    @test isapprox(sro_target_function([c1, c2], 0.95, 1), -1.5)
+    # p of at least 4 is 16%
+    @test isapprox(sro_target_function([c1, c2], 0.15, 4), -6.0)
+
+    # infeasible probabilities
+    @test sro_target_function([c1, c2], 0.97, 1) == Inf
+    @test sro_target_function([c1, c2], 0.17, 4) == Inf
+
+    # infeasible values
+    @test sro_target_function([c1, c2], 0.0, 5) == Inf
+    
+    # empty set handling
+    @test sro_target_function(DiscreteResource{Float64}[], 0.0, 0) == Inf
 end
 
 @testset "DiscreteInstances" begin
@@ -62,7 +80,7 @@ end
     c2_cost = [0.0, -2.0, -4.0]
     c1 = DiscreteResource([0.2, 0.4, 0.4], c1_cost)
     c2 = DiscreteResource([0.2, 0.4, 0.4], c2_cost)
-    problem = DiscreteProblem([c1, c2], 0.5, 10.0)
+    problem = DiscreteProblem([c1, c2], 0.5, 10)
 
     n_instances = 100
 
@@ -88,8 +106,8 @@ end
 
 @testset "ContinuousResource" begin
     # constructor tests
-    not_ok_rv = Normal(5,5)
-    ok_rv = truncated(Normal(5,5); lower=0, upper=5)
+    not_ok_rv = Normal(5, 5)
+    ok_rv = truncated(Normal(5, 5); lower = 0, upper = 5)
     ok_cost(x::Float64)::Float64 = x^2
 
     @test_throws ArgumentError ContinuousResource(not_ok_rv, ok_cost)
@@ -99,23 +117,23 @@ end
     values, costs = roll_values(res, 10)
     @test length(values) == 10
     @test length(costs) == 10
-    @test all([x>=0 for x in values])
-    @test all([x<=5 for x in values])
+    @test all([x >= 0 for x in values])
+    @test all([x <= 5 for x in values])
     @test all([ok_cost(values[i]) == costs[i] for i in eachindex(values)])
 
     values, costs = roll_values(Xoshiro(1), res, 10)
     @test length(values) == 10
     @test length(costs) == 10
-    @test all([x>=0 for x in values])
-    @test all([x<=5 for x in values])
+    @test all([x >= 0 for x in values])
+    @test all([x <= 5 for x in values])
     @test all([ok_cost(values[i]) == costs[i] for i in eachindex(values)])
 end
 
 @testset "GaussianCopulaSet" begin
     # constructor
-    raw_rvs = [Normal(5,5), Beta(1.5, 1.5), Weibull(1.5, 1.5)]
-    rvs = [truncated(x; lower=0, upper=1) for x in raw_rvs]
-    resources = [ContinuousResource(x, y->y^2) for x in rvs]
+    raw_rvs = [Normal(5, 5), Beta(1.5, 1.5), Weibull(1.5, 1.5)]
+    rvs = [truncated(x; lower = 0, upper = 1) for x in raw_rvs]
+    resources = [ContinuousResource(x, y -> y^2) for x in rvs]
 
     cov_mat = [
         1.0 0.5 0.5

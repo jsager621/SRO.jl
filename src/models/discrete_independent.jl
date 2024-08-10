@@ -16,7 +16,7 @@ struct DiscreteResource{T<:AbstractFloat}
     max_value::Int64
     p::Vector{T}
     c::Vector{T}
-    v::Vector{T}
+    v::Vector{Int64}
 
     function DiscreteResource(prob::Vector{T}, cost::Vector{T}) where {T<:AbstractFloat}
         if length(prob) != length(cost)
@@ -33,6 +33,8 @@ struct DiscreteResource{T<:AbstractFloat}
         return new{T}(max_value, prob, cost, v)
     end
 end
+
+const ZERO_RESOURCE = DiscreteResource([1.0], [0.0])
 
 function Base.getindex(r::DiscreteResource, k)
     return (r.p[k], r.c[k], r.v[k])
@@ -106,6 +108,14 @@ function add(a::DiscreteResource{T}, b::DiscreteResource{T})::DiscreteResource{T
 end
 
 function add(resources::Vector{DiscreteResource{T}})::DiscreteResource{T} where {T}
+    if length(resources) == 0
+        return ZERO_RESOURCE
+    end
+
+    if length(resources) == 1
+        return resources[1]
+    end
+
     final_length = sum([length(x) for x in resources]) - length(resources) + 1
     f3 = convolve([res.p for res in resources])
 
@@ -145,8 +155,8 @@ a probability target `p_target` and a value target `v_target`.
 """
 struct DiscreteProblem{T<:AbstractFloat}
     resources::Vector{DiscreteResource{T}}
-    p_target::Float64
-    v_target::Float64
+    p_target::T
+    v_target::Int64
 end
 
 #---------------------------------------
@@ -195,13 +205,41 @@ end
 Solution structure for a discrete SRO `problem`. Encapsulates different ways to give the solution:
 * `resource_indices` - vector of indices of the optimal solution resources as in the `problem.resources` vector
 * `resources` - vector of the optimal resources
-* `probability` - sum probability of the solution resource set at the target value
 * `cost` - expected costs of the solution resource set at the target value
 """
 struct DiscreteSolution
     problem::DiscreteProblem
     resource_indices::Vector{Int64}
     resources::Vector{DiscreteResource}
-    probability::Float64
     cost::Float64
+end
+
+#---------------------------------------
+# Target Function for Optimization
+#---------------------------------------
+function sro_target_function(
+    resources::Vector{DiscreteResource{T}},
+    p_target::T,
+    v_target::Int64,
+)::T where {T}
+    if isempty(resources)
+        return Inf
+    end
+
+    sum_resource = add(resources)
+    target_probabilities = [1.0; ccdf(sum_resource)[1:end-1]]
+    target_index = v_target + 1
+
+    # set is not feasible because of length
+    if length(sum_resource) < target_index
+        return Inf
+    end
+
+    # set is not feasible because of p_target
+    if target_probabilities[target_index] < p_target
+        return Inf
+    end
+
+    # set is feasible
+    return sum_resource.c[target_index]
 end
