@@ -4,6 +4,7 @@ module SRO
 using Distributions
 import Distributions: cdf, ccdf
 using StatsBase
+using Combinatorics
 
 # utils
 include("utils/utils.jl")

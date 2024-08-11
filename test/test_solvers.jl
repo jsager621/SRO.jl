@@ -63,3 +63,20 @@ end
     @test sol_3.cost == Inf
     @test sol_4.cost == Inf
 end
+
+@testset "DiscreteOptimum" begin
+    problems = discrete_solver_problems()
+
+    sol_1 = discreteOptimum(problems[1])
+    sol_2 = discreteOptimum(problems[2])
+    sol_3 = discreteOptimum(problems[3])
+    sol_4 = discreteOptimum(problems[4])
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
+
+    @test Set(sol_1.resources) == Set(problems[1].resources[1:2])
+    @test Set(sol_2.resources) == Set(problems[1].resources)
+end
