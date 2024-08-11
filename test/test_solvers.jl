@@ -49,4 +49,17 @@ end
     @test sol_2.cost < Inf
     @test sol_3.cost == Inf
     @test sol_4.cost == Inf
+
+    # one plus one evo
+    n_steps = 10
+
+    sol_1 = one_plus_one_evo(problems[1], n_steps)
+    sol_2 = one_plus_one_evo(problems[2], n_steps)
+    sol_3 = one_plus_one_evo(problems[3], n_steps)
+    sol_4 = one_plus_one_evo(problems[4], n_steps)
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
 end

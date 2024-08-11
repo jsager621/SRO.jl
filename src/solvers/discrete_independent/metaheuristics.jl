@@ -218,7 +218,7 @@ function _best_ant_solutions(
             replace = false,
         )
 
-        cutoff, ant_cost = _best_set_in_order(resources, ant_path, p_target, v_target)
+        cutoff, _ = _best_set_in_order(resources, ant_path, p_target, v_target)
         ant_indices = ant_path[1:cutoff]
         for i in ant_indices
             output[i] += 1
@@ -256,6 +256,48 @@ function _best_set_in_order(
     return (cutoff, best_cost)
 end
 
-function one_plus_one_evo(problem::DiscreteProblem)::DiscreteSolution
+"""
+Basic one plus one evolutionary algorithm.
+Starts with all resources as the starting solution.
+In each step the current solution gets modified by randomly flipping the selection bits.
+The probability of each bit to get flipped is 1/length(resources).
+After `n_steps` the best solution found so far is returned.
+"""
+function one_plus_one_evo(problem::DiscreteProblem, n_steps::Int64)::DiscreteSolution
+    return one_plus_one_evo(Xoshiro(), problem, n_steps)
+end
 
+function one_plus_one_evo(rng::AbstractRNG, problem::DiscreteProblem, n_steps::Int64)::DiscreteSolution
+    resources = problem.resources
+    p_target = problem.p_target
+    v_target = problem.v_target
+
+    best_cost = sro_target_function(resources, p_target, v_target)
+    select_vector = ones(Bool, length(resources))
+    p_bit_flip = 1.0 / length(resources)
+
+    for _ = 1:n_steps
+        new_select_vector = zeros(Bool, length(resources))
+        for i in eachindex(new_select_vector)
+            if rand(rng) <= p_bit_flip
+                new_select_vector[i] = !select_vector[i]
+            else
+                new_select_vector[i] = select_vector[i]
+            end
+        end
+
+        new_cost = sro_target_function(resources[new_select_vector], p_target, v_target)
+
+        if new_cost < best_cost
+            best_cost = new_cost
+            select_vector = new_select_vector
+        end
+    end
+
+    return DiscreteSolution(
+        problem,
+        collect(1:length(resources))[select_vector],
+        resources[select_vector],
+        best_cost,
+    )
 end
