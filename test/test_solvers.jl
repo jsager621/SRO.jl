@@ -36,4 +36,17 @@ end
     @test sol_2.cost < Inf
     @test sol_3.cost == Inf
     @test sol_4.cost == Inf
+
+    # aco
+    args = ACOArgs()
+
+    sol_1 = aco(problems[1], args)
+    sol_2 = aco(problems[2], args)
+    sol_3 = aco(problems[3], args)
+    sol_4 = aco(problems[4], args)
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
 end
