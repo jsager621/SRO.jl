@@ -27,7 +27,11 @@ function bpso(problem::DiscreteProblem{T}, args::BPSOArgs)::DiscreteSolution whe
     return bpso(Xoshiro(), problem, args)
 end
 
-function bpso(rng::AbstractRNG, problem::DiscreteProblem{T}, args::BPSOArgs)::DiscreteSolution where {T}
+function bpso(
+    rng::AbstractRNG,
+    problem::DiscreteProblem{T},
+    args::BPSOArgs,
+)::DiscreteSolution where {T}
     sigmoid(z::Real) = one(z) / (one(z) + exp(-z))
 
     n_particles = args.n_particles
@@ -61,7 +65,7 @@ function bpso(rng::AbstractRNG, problem::DiscreteProblem{T}, args::BPSOArgs)::Di
     global_best_position = ones(Bool, length(resources))
     global_best_cost = sro_target_function(resources, p_target, v_target)
 
-    known_combinations = ConcurrentDict{Set{Int64}, T}()
+    known_combinations = ConcurrentDict{Set{Int64},T}()
 
     # velocity update: v(t+1) = w * v(t) + c_particle R1 (local_best - position) + c_global R2 (g_best - position)
     # have to apply this bitwise
@@ -106,7 +110,7 @@ function bpso(rng::AbstractRNG, problem::DiscreteProblem{T}, args::BPSOArgs)::Di
             end
 
 
-            
+
             if eval_new < local_eval
                 particle_best_costs[i] = eval_new
                 particle_best_positions[i] = pos_new
@@ -154,11 +158,15 @@ In this implementation P(resource) = pheromone(resource)/total_pheromone.
 Pheromones are initialized with an equal starting value `phero_init`.
 Pheromones decay after each run by the rate given by `decay_rate`.
 """
-function aco(problem::DiscreteProblem, args::ACOArgs)::DiscreteSolution
+function aco(problem::DiscreteProblem{T}, args::ACOArgs)::DiscreteSolution where {T}
     return aco(Xoshiro(), problem, args)
 end
 
-function aco(rng::AbstractRNG, problem::DiscreteProblem, args::ACOArgs)::DiscreteSolution
+function aco(
+    rng::AbstractRNG,
+    problem::DiscreteProblem{T},
+    args::ACOArgs,
+)::DiscreteSolution where {T}
     n_ants = args.n_ants
     n_runs = args.n_runs
     phero_init = args.phero_init
@@ -171,12 +179,16 @@ function aco(rng::AbstractRNG, problem::DiscreteProblem, args::ACOArgs)::Discret
 
     pheromones = [phero_init for _ = 1:length(resources)]
 
+    # unlike BPSO, its a vector here because order matters!
+    # maps an order of resources to its cutoff (Int64)
+    known_combinations = ConcurrentDict{Vector{Int64}, Int64}()
+
     for _ = 1:n_runs
         # compute probabilities for this run once
         total_pheromone = sum(pheromones)
         probabilities = ProbabilityWeights([x / total_pheromone for x in pheromones])
         resource_best_counters =
-            _best_ant_solutions(rng, probabilities, resources, n_ants, p_target, v_target)
+            _best_ant_solutions!(rng, probabilities, resources, n_ants, p_target, v_target, known_combinations)
 
         # decay old pheromone before applying new one
         pheromones = pheromones .* decay_rate
@@ -186,12 +198,8 @@ function aco(rng::AbstractRNG, problem::DiscreteProblem, args::ACOArgs)::Discret
         end
     end
 
-    cutoff, solution_cost = _best_set_in_order(
-        resources,
-        sortperm(pheromones, rev = true),
-        p_target,
-        v_target,
-    )
+    cutoff, solution_cost =
+        _best_set_in_order(resources, sortperm(pheromones, rev = true), p_target, v_target)
     solution_indices = sortperm(pheromones, rev = true)[1:cutoff]
 
     return DiscreteSolution(
@@ -206,17 +214,21 @@ end
 Runs `n_ants` on the given resource set with given probabilities for selection.
 Returns the number of times each resource was best.
 """
-function _best_ant_solutions(
+function _best_ant_solutions!(
     rng::AbstractRNG,
     probabilities::ProbabilityWeights,
     resources::Vector{DiscreteResource{T}},
     n_ants::Int64,
     p_target::T,
     v_target::Int64,
+    known_combinations::ConcurrentDict{Vector{Int64}, Int64}
 )::Vector{Int64} where {T}
-    output = zeros(Int64, length(resources))
-
+    ant_outputs = Vector{Vector{Int64}}()
     for _ = 1:n_ants
+        push!(ant_outputs, zeros(Int64, length(resources)))
+    end
+
+    Threads.@threads for a_id = 1:n_ants
         ant_path = sample(
             rng,
             collect(1:length(resources)),
@@ -225,14 +237,20 @@ function _best_ant_solutions(
             replace = false,
         )
 
-        cutoff, _ = _best_set_in_order(resources, ant_path, p_target, v_target)
+        cutoff = -1
+        if ant_path in keys(known_combinations)
+            cutoff = known_combinations[ant_path]
+        else
+            cutoff, _ = _best_set_in_order(resources, ant_path, p_target, v_target)
+        end
+        
         ant_indices = ant_path[1:cutoff]
         for i in ant_indices
-            output[i] += 1
+            ant_outputs[a_id][i] += 1
         end
     end
 
-    return output
+    return sum(ant_outputs)
 end
 
 """
@@ -274,7 +292,11 @@ function one_plus_one_evo(problem::DiscreteProblem, n_steps::Int64)::DiscreteSol
     return one_plus_one_evo(Xoshiro(), problem, n_steps)
 end
 
-function one_plus_one_evo(rng::AbstractRNG, problem::DiscreteProblem, n_steps::Int64)::DiscreteSolution
+function one_plus_one_evo(
+    rng::AbstractRNG,
+    problem::DiscreteProblem,
+    n_steps::Int64,
+)::DiscreteSolution
     resources = problem.resources
     p_target = problem.p_target
     v_target = problem.v_target
