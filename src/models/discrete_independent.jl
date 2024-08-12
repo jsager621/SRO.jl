@@ -207,11 +207,11 @@ Solution structure for a discrete SRO `problem`. Encapsulates different ways to 
 * `resources` - vector of the optimal resources
 * `cost` - expected costs of the solution resource set at the target value
 """
-struct DiscreteSolution
-    problem::DiscreteProblem
+struct DiscreteSolution{T<:AbstractFloat}
+    problem::DiscreteProblem{T}
     resource_indices::Vector{Int64}
-    resources::Vector{DiscreteResource}
-    cost::Float64
+    resources::Vector{DiscreteResource{T}}
+    cost::T
 end
 
 #---------------------------------------

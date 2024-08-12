@@ -1,4 +1,4 @@
-function discreteOptimum(problem::DiscreteProblem)::DiscreteSolution
+function discrete_optimum(problem::DiscreteProblem)::DiscreteSolution
     resources = problem.resources
     p_target = problem.p_target
     v_target = problem.v_target

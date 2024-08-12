@@ -21,7 +21,7 @@ function discrete_solver_problems()
     return [p1, p2, p3, p4]
 end
 
-@testset "DiscreteMetaheuristics" begin
+@testset "discrete_metaheuristics" begin
     problems = discrete_solver_problems()
 
     # bpso
@@ -64,13 +64,13 @@ end
     @test sol_4.cost == Inf
 end
 
-@testset "DiscreteOptimum" begin
+@testset "discrete_optimum" begin
     problems = discrete_solver_problems()
 
-    sol_1 = discreteOptimum(problems[1])
-    sol_2 = discreteOptimum(problems[2])
-    sol_3 = discreteOptimum(problems[3])
-    sol_4 = discreteOptimum(problems[4])
+    sol_1 = discrete_optimum(problems[1])
+    sol_2 = discrete_optimum(problems[2])
+    sol_3 = discrete_optimum(problems[3])
+    sol_4 = discrete_optimum(problems[4])
 
     @test sol_1.cost < Inf
     @test sol_2.cost < Inf
@@ -79,4 +79,17 @@ end
 
     @test Set(sol_1.resources) == Set(problems[1].resources[1:2])
     @test Set(sol_2.resources) == Set(problems[1].resources)
+end
+
+@testset "discrete_simple_heuristics" begin
+    problems = discrete_solver_problems()
+    sol_1 = take_all(problems[1])
+    sol_2 = take_all(problems[2])
+    sol_3 = take_all(problems[3])
+    sol_4 = take_all(problems[4])
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
 end
