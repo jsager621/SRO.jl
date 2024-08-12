@@ -294,9 +294,9 @@ end
 
 function one_plus_one_evo(
     rng::AbstractRNG,
-    problem::DiscreteProblem,
+    problem::DiscreteProblem{T},
     n_steps::Int64,
-)::DiscreteSolution
+)::DiscreteSolution where {T}
     resources = problem.resources
     p_target = problem.p_target
     v_target = problem.v_target
