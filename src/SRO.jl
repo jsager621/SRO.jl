@@ -5,6 +5,7 @@ using Distributions
 import Distributions: cdf, ccdf
 using StatsBase
 using Combinatorics
+using ConcurrentCollections
 
 # utils
 include("utils/utils.jl")

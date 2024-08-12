@@ -23,11 +23,11 @@ an intertia constant.
 
 For a description of the input parameters see the `BPSOArgs` struct.
 """
-function bpso(problem::DiscreteProblem, args::BPSOArgs)::DiscreteSolution
+function bpso(problem::DiscreteProblem{T}, args::BPSOArgs)::DiscreteSolution where {T}
     return bpso(Xoshiro(), problem, args)
 end
 
-function bpso(rng::AbstractRNG, problem::DiscreteProblem, args::BPSOArgs)::DiscreteSolution
+function bpso(rng::AbstractRNG, problem::DiscreteProblem{T}, args::BPSOArgs)::DiscreteSolution where {T}
     sigmoid(z::Real) = one(z) / (one(z) + exp(-z))
 
     n_particles = args.n_particles
@@ -58,8 +58,10 @@ function bpso(rng::AbstractRNG, problem::DiscreteProblem, args::BPSOArgs)::Discr
     ]
 
     # initialize global best to full selection
-    global_best_positions = ones(Bool, length(resources))
-    global_best_costs = sro_target_function(resources, p_target, v_target)
+    global_best_position = ones(Bool, length(resources))
+    global_best_cost = sro_target_function(resources, p_target, v_target)
+
+    known_combinations = ConcurrentDict{Set{Int64}, T}()
 
     # velocity update: v(t+1) = w * v(t) + c_particle R1 (local_best - position) + c_global R2 (g_best - position)
     # have to apply this bitwise
@@ -69,10 +71,8 @@ function bpso(rng::AbstractRNG, problem::DiscreteProblem, args::BPSOArgs)::Discr
     #
     # local and global best are set as one may expect
     for _ = 1:n_cycles
-        intermediate_g_best = global_best_positions
-        intermediate_best_costs = global_best_costs
 
-        for i = 1:n_particles
+        Threads.@threads for i = 1:n_particles
             # update velocity
             r1 = rand(rng)
             r2 = rand(rng)
@@ -85,7 +85,7 @@ function bpso(rng::AbstractRNG, problem::DiscreteProblem, args::BPSOArgs)::Discr
             v_new =
                 w * v +
                 c_particle * r1 * (local_best - pos) +
-                c_global * r2 * (global_best_positions - pos)
+                c_global * r2 * (global_best_position - pos)
             particle_velocities[i] = [min(v_max, v) for v in v_new]
 
 
@@ -96,28 +96,35 @@ function bpso(rng::AbstractRNG, problem::DiscreteProblem, args::BPSOArgs)::Discr
             particle_positions[i] = pos_new
 
             # evaluate
-            eval_new = sro_target_function(resources[pos_new], p_target, v_target)
+            eval_new = Inf
+            r_set = Set(pos_new)
+            if r_set in keys(known_combinations)
+                eval_new = known_combinations[r_set]
+            else
+                eval_new = sro_target_function(resources[pos_new], p_target, v_target)
+                known_combinations[r_set] = eval_new
+            end
 
+
+            
             if eval_new < local_eval
                 particle_best_costs[i] = eval_new
                 particle_best_positions[i] = pos_new
             end
-
-            if eval_new < intermediate_best_costs
-                intermediate_best_costs = eval_new
-                intermediate_g_best = pos_new
-            end
         end
 
-        global_best_positions = intermediate_g_best
-        global_best_costs = intermediate_best_costs
+        c_min, c_min_index = findmin(particle_best_costs)
+        if c_min < global_best_cost
+            global_best_cost = c_min
+            global_best_position = particle_best_positions[c_min_index]
+        end
     end
 
     return DiscreteSolution(
         problem,
-        collect(1:length(resources))[global_best_positions],
-        resources[global_best_positions],
-        global_best_costs,
+        collect(1:length(resources))[global_best_position],
+        resources[global_best_position],
+        global_best_cost,
     )
 end
 
