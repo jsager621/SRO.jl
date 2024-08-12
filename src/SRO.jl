@@ -41,6 +41,6 @@ include("solvers/discrete_independent/distributed.jl")
 export aco, ACOArgs
 export bpso, BPSOArgs
 export one_plus_one_evo
-export discrete_optimum, take_all
+export discrete_optimum, take_all, random_feasible
 
 end

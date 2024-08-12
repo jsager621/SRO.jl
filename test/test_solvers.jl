@@ -82,11 +82,23 @@ end
 end
 
 @testset "discrete_simple_heuristics" begin
+    # take_all
     problems = discrete_solver_problems()
     sol_1 = take_all(problems[1])
     sol_2 = take_all(problems[2])
     sol_3 = take_all(problems[3])
     sol_4 = take_all(problems[4])
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
+
+    # random_feasible
+    sol_1 = random_feasible(problems[1])
+    sol_2 = random_feasible(problems[2])
+    sol_3 = random_feasible(problems[3])
+    sol_4 = random_feasible(problems[4])
 
     @test sol_1.cost < Inf
     @test sol_2.cost < Inf
