@@ -42,5 +42,6 @@ export aco, ACOArgs
 export bpso, BPSOArgs
 export one_plus_one_evo
 export discrete_optimum, take_all, random_feasible
+export PropagatingAgent, propagating_agent_factory, run_agent, run_propagated_agent_problem
 
 end

@@ -14,6 +14,7 @@ InvertedIndices = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
 Mango = "5e49fdec-d473-4d14-b295-7bff2fcf1925"
 OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 

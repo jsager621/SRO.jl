@@ -25,7 +25,7 @@ end
     problems = discrete_solver_problems()
 
     # bpso
-    args = BPSOArgs(;n_particles = 10, n_cycles = 2)
+    args = BPSOArgs(; n_particles = 10, n_cycles = 2)
 
     sol_1 = bpso(problems[1], args)
     sol_2 = bpso(problems[2], args)
@@ -107,9 +107,49 @@ end
 end
 
 @testset "PropagatingAgent" begin
+    problems = discrete_solver_problems()
+
     HOST = ip"127.0.0.1"
     PORT = 5555
-    # agent structure
     c = Container()
-    c.protocol = TCPProtocol(address=InetAddr(HOST, PORT))
+    c.protocol = TCPProtocol(address = InetAddr(HOST, PORT))
+
+
+    # agent structure
+    agent = propagating_agent_factory(
+        c,
+        problems[1].resources[1],
+        problems[1].p_target,
+        problems[1].v_target,
+        0.1,
+        0.1,
+    )
+
+    @test agent.best_cost == Inf
+    @test agent.best_agents == [address(agent)]
+
+    # run single agent without neighbors
+    run_agent(agent)
+    @test agent.best_cost == Inf
+    @test agent.best_agents == [address(agent)]
+
+    # run solver logic
+    neigh = Bool[
+        0 1 1
+        1 0 1
+        1 1 0
+    ]
+    addr = InetAddr(HOST, PORT)
+    info = 0.5
+    term = 0.5
+
+    sol_1 = run_propagated_agent_problem(problems[1], neigh, addr, info, term)
+    sol_2 = run_propagated_agent_problem(problems[2], neigh, addr, info, term)
+    sol_3 = run_propagated_agent_problem(problems[3], neigh, addr, info, term)
+    sol_4 = run_propagated_agent_problem(problems[4], neigh, addr, info, term)
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
 end
