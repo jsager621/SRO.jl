@@ -89,7 +89,7 @@ Returns:
 The combined resource with probability distribution `a.p * b.p` and corresponding
 expected cost.
 """
-function add(a::DiscreteResource{T}, b::DiscreteResource{T})::DiscreteResource{T} where {T}
+function combine(a::DiscreteResource{T}, b::DiscreteResource{T})::DiscreteResource{T} where {T}
     f3 = convolve(a.p, b.p)
 
     n = length(a)
@@ -122,7 +122,7 @@ Returns:
 The combined resource with probability distribution and corresponding
 expected cost.
 """
-function add(resources::Vector{DiscreteResource{T}})::DiscreteResource{T} where {T}
+function combine(resources::Vector{DiscreteResource{T}})::DiscreteResource{T} where {T}
     if length(resources) == 0
         return ZERO_RESOURCE
     end
@@ -250,7 +250,7 @@ function sro_target_function(
         return Inf
     end
 
-    sum_resource = add(resources)
+    sum_resource = combine(resources)
     target_probabilities = [1.0; ccdf(sum_resource)[1:end-1]]
     target_index = v_target + 1
 

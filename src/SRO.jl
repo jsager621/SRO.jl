@@ -21,7 +21,7 @@ export ResourceSet, CopulaSet, CorrelatedProblem, CorrelatedInstances, Correlate
 
 # discrete
 include("models/discrete_independent.jl")
-export DiscreteResource, cdf, ccdf, add, ZERO_RESOURCE
+export DiscreteResource, cdf, ccdf, combine, ZERO_RESOURCE
 export DiscreteProblem, DiscreteInstances, DiscreteSolution
 export sro_target_function
 

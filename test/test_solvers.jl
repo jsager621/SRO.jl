@@ -105,3 +105,11 @@ end
     @test sol_3.cost == Inf
     @test sol_4.cost == Inf
 end
+
+@testset "PropagatingAgent" begin
+    HOST = ip"127.0.0.1"
+    PORT = 5555
+    # agent structure
+    c = Container()
+    c.protocol = TCPProtocol(address=InetAddr(HOST, PORT))
+end
