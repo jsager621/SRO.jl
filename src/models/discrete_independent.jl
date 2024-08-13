@@ -81,6 +81,14 @@ function convolve(vs::Vector{Vector{T}})::Vector{T} where {T<:AbstractFloat}
     return filtered
 end
 
+"""
+Compute the combined discrete resource of the (independent)
+resources `a` and `b`.
+
+Returns:
+The combined resource with probability distribution `a.p * b.p` and corresponding
+expected cost.
+"""
 function add(a::DiscreteResource{T}, b::DiscreteResource{T})::DiscreteResource{T} where {T}
     f3 = convolve(a.p, b.p)
 
@@ -107,6 +115,13 @@ function add(a::DiscreteResource{T}, b::DiscreteResource{T})::DiscreteResource{T
     return DiscreteResource(f3, c3)
 end
 
+"""
+Compute the combined discrete resource of a set of independent `resources`.
+
+Returns:
+The combined resource with probability distribution and corresponding
+expected cost.
+"""
 function add(resources::Vector{DiscreteResource{T}})::DiscreteResource{T} where {T}
     if length(resources) == 0
         return ZERO_RESOURCE
@@ -217,6 +232,15 @@ end
 #---------------------------------------
 # Target Function for Optimization
 #---------------------------------------
+"""
+Target function for discrete SRO.
+Given a set of `resources` and a target consisting of
+`p_target` and `v_target`, determine the valuation of the set.
+
+Returns:
+* `Inf` - if the resource set is infeasible for the target
+* `E(c(resources))` - otherwise
+"""
 function sro_target_function(
     resources::Vector{DiscreteResource{T}},
     p_target::T,
