@@ -97,10 +97,10 @@ end
 
     # correct cost content
     @test all([
-        inst.costs[1][i] == c1_cost[inst.values[1][i]] for i in eachindex(inst.values[1])
+        inst.costs[1][i] == c1_cost[inst.values[1][i]+1] for i in eachindex(inst.values[1])
     ])
     @test all([
-        inst.costs[2][i] == c2_cost[inst.values[2][i]] for i in eachindex(inst.values[2])
+        inst.costs[2][i] == c2_cost[inst.values[2][i]+1] for i in eachindex(inst.values[2])
     ])
 end
 

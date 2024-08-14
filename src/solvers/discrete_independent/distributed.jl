@@ -59,7 +59,7 @@ function propagating_agent_factory(
         time(),
     )
 
-    register(container, agent)
+    Mango.register(container, agent)
     push!(agent.agent_order, address(agent))
 
     agent.best_agents = AgentAddress[address(agent)]

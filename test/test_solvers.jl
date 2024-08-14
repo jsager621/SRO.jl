@@ -64,7 +64,8 @@ end
     @test sol_4.cost == Inf
 end
 
-@testset "discrete_optimum" begin
+@testset "discrete_optima" begin
+    # regular optimum
     problems = discrete_solver_problems()
 
     sol_1 = discrete_optimum(problems[1])
@@ -79,6 +80,20 @@ end
 
     @test Set(sol_1.resources) == Set(problems[1].resources[1:2])
     @test Set(sol_2.resources) == Set(problems[1].resources)
+
+    # oracle
+    inst = DiscreteInstances(Xoshiro(0), problems[3], 10)
+    oracle_sol = oracle(inst)
+    @test all([x==Inf for x in oracle_sol])
+
+    rv = [0.0, 0.0, 1.0]
+    rv_c = [1.0, 1.0, 1.0]
+    res = DiscreteResource(rv, rv_c)
+    p = DiscreteProblem([res], 0.5, 2)
+    cant_fail = DiscreteInstances(p, 10)
+    oracle_sol = oracle(cant_fail)
+    @test all([x==1.0 for x in oracle_sol])
+
 end
 
 @testset "discrete_simple_heuristics" begin

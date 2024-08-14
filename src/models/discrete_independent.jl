@@ -200,7 +200,7 @@ struct DiscreteInstances{T<:AbstractFloat}
             cumu = cdf(res)
 
             v = [findfirst(n -> n >= x, cumu) for x in rands]
-            push!(values, v)
+            push!(values, v .- 1)
 
             c = [res.c[x] for x in v]
             push!(costs, c)
