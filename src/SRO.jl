@@ -1,6 +1,8 @@
 module SRO
 
 # avoid name collisions with packages used here
+using Random
+using Copulas
 using Distributions
 import Distributions: cdf, ccdf
 using StatsBase
