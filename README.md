@@ -9,7 +9,7 @@ Given a set of resources $RES$, a probability target $p_{target}$ and a value ta
 
 $$
 \begin{alignat}{2}
-        & \underset{x \in 2^{R}}{\operatorname{arg\,min}} & \mathbb{E}(c(x))                                \\
+        & \underset{x \in 2^{R}}{\mathop{\text{arg min}}} & \mathbb{E}(c(x))                                \\
         & \text{subject to } & 1 - cdf(\sum x)(v_{target}) \geq p_{target}
 \end{alignat}
 $$
