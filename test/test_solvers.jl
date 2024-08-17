@@ -196,10 +196,10 @@ end
     info = 0.5
     term = 0.5
 
-    sol_1 = run_propagated_agent_problem(problems[1], neigh, addr, info, term)
-    sol_2 = run_propagated_agent_problem(problems[2], neigh, addr, info, term)
-    sol_3 = run_propagated_agent_problem(problems[3], neigh, addr, info, term)
-    sol_4 = run_propagated_agent_problem(problems[4], neigh, addr, info, term)
+    sol_1 = propagated_agent_solver(problems[1], neigh, addr, info, term)
+    sol_2 = propagated_agent_solver(problems[2], neigh, addr, info, term)
+    sol_3 = propagated_agent_solver(problems[3], neigh, addr, info, term)
+    sol_4 = propagated_agent_solver(problems[4], neigh, addr, info, term)
 
     @test sol_1.cost < Inf
     @test sol_2.cost < Inf

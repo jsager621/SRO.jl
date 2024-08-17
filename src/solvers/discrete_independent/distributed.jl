@@ -282,7 +282,7 @@ Agent neighbourhoods are given by the `adjacency_matrix`.
 Agents may not be their own neighbor and entries on the diagonal
 are ignored.
 """
-function run_propagated_agent_problem(
+function propagated_agent_solver(
     problem::DiscreteProblem,
     adjacency_matrix::AdjacencyMatrix,
     container_addr::InetAddr,
