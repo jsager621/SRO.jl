@@ -84,7 +84,7 @@ end
     # oracle
     inst = DiscreteInstances(Xoshiro(0), problems[3], 10)
     oracle_sol = oracle(inst)
-    @test all([x==Inf for x in oracle_sol])
+    @test all([x == Inf for x in oracle_sol])
 
     rv = [0.0, 0.0, 1.0]
     rv_c = [1.0, 1.0, 1.0]
@@ -92,7 +92,7 @@ end
     p = DiscreteProblem([res], 0.5, 2)
     cant_fail = DiscreteInstances(p, 10)
     oracle_sol = oracle(cant_fail)
-    @test all([x==1.0 for x in oracle_sol])
+    @test all([x == 1.0 for x in oracle_sol])
 
 end
 
@@ -119,6 +119,44 @@ end
     @test sol_2.cost < Inf
     @test sol_3.cost == Inf
     @test sol_4.cost == Inf
+end
+
+@testset "AdjacencyMatrix" begin
+    # constructor
+    ok_matrix = Bool[
+        1 0
+        0 1
+    ]
+    bad_matrix = Bool[
+        1 0 1
+        0 1 0
+    ]
+
+    # valid args
+    mat = AdjacencyMatrix(ok_matrix)
+    @test true
+
+    # invalid args
+    @test_throws ArgumentError AdjacencyMatrix(bad_matrix)
+
+    # getindex
+    for i in eachindex(ok_matrix)
+        @test mat[i] == ok_matrix[i]
+    end
+
+    # creation functions
+    rng = Xoshiro(1)
+    mat = small_world(rng, 5, 2, 0.5)
+    @test size(mat) == (5, 5)
+
+    mat = small_world(5, 2, 0.5)
+    @test size(mat) == (5, 5)
+
+    mat = ring(5)
+    @test size(mat) == (5, 5)
+
+    mat = fully_connected(5)
+    @test size(mat) == (5, 5)
 end
 
 @testset "PropagatingAgent" begin
@@ -149,11 +187,11 @@ end
     @test agent.best_agents == [address(agent)]
 
     # run solver logic
-    neigh = Bool[
+    neigh = AdjacencyMatrix(Bool[
         0 1 1
         1 0 1
         1 1 0
-    ]
+    ])
     addr = InetAddr(HOST, PORT)
     info = 0.5
     term = 0.5

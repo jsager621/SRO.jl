@@ -180,6 +180,101 @@ function run_agent(agent::PropagatingAgent)
 end
 
 """
+Wrapper around an adjacency matrix (Matrix{Bool}) for 
+distributed solver neighborhoods.
+
+Can be constructed directly from a bool matrix or using one of the
+topology-specific constructor functions.
+"""
+struct AdjacencyMatrix
+    values::Matrix{Bool}
+
+    function AdjacencyMatrix(v::Matrix{Bool})
+        if !(size(v)[1] == size(v)[2])
+            throw(ArgumentError("Adjacency matrix must be square!"))
+        end
+        return new(v)
+    end
+end
+
+function Base.getindex(x::AdjacencyMatrix, inds...)
+    return Base.getindex(x.values, inds...)
+end
+
+function Base.size(x::AdjacencyMatrix, args...)
+    return Base.size(x.values, args...)
+end
+
+"""
+Create a small world adjacency matrix with `n` nodes, 
+neighborhood degree `k` and probability `p` by the 
+Watts-Strogatz method.
+"""
+function small_world(n::Int64, k::Int64, p::Float64)::AdjacencyMatrix
+    return small_world(Xoshiro(), n, k, p)
+end
+
+function small_world(rng::AbstractRNG, n::Int64, k::Int64, p::Float64)::AdjacencyMatrix
+    if k % 2 != 0
+        throw(ArgumentError("k has to be even for small world."))
+    end
+
+    if k < 2
+        throw(ArgumentError("Small world with k < 2 makes little sense."))
+    end
+
+    if n < 4
+        # will always end up fully connected
+        return fully_connected(n)
+    end
+
+    mat = zeros(Bool, n, n)
+    dist = k/2
+
+    # create ring lattice with k-neighbor connections
+    # and randomly add connections depending on p
+    for i in 1:n
+        for j in i+1:n
+            if 0 < abs(i-j) % (n - 1 - dist) <= dist
+                mat[i,j] = 1
+                mat[j,i] = 1
+            end
+
+            if mat[i,j] == 0 && rand(rng) < p
+                mat[i,j] = mat[j,i] = 1
+            end 
+        end
+    end
+
+    return AdjacencyMatrix(mat)
+end
+
+"""
+Create fully connected adjacency matrix.
+"""
+function fully_connected(n::Int64)::AdjacencyMatrix
+    mat = ones(Bool, n, n)
+    for i in 1:n
+        mat[i,i] = 0
+    end
+    return AdjacencyMatrix(mat)
+end
+
+"""
+Create ring adjacency matrix.
+"""
+function ring(n::Int64)::AdjacencyMatrix
+    mat = zeros(Bool, n, n)
+    for i in 1:n
+        j = i == n ? 1 : i + 1
+        mat[i, j] = mat[j, i] = 1
+    end
+
+    return AdjacencyMatrix(mat)
+end
+
+
+"""
 Run the discrete `problem` with the PropagatingAgent algorithm 
 in a single container.
 One agent is created for each problem resource.
@@ -189,7 +284,7 @@ are ignored.
 """
 function run_propagated_agent_problem(
     problem::DiscreteProblem,
-    adjacency_matrix::Matrix{Bool},
+    adjacency_matrix::AdjacencyMatrix,
     container_addr::InetAddr,
     information_timeout::Float64,
     termination_timeout::Float64,
@@ -197,10 +292,6 @@ function run_propagated_agent_problem(
     resources = problem.resources
     p_target = problem.p_target
     v_target = problem.v_target
-
-    if !(size(adjacency_matrix)[1] == size(adjacency_matrix)[2])
-        throw(ArgumentError("Adjacency matrix must be square!"))
-    end
 
     if !(size(adjacency_matrix)[1] == length(resources))
         throw(
