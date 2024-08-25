@@ -15,13 +15,13 @@ function plot_results(results::Dict{String, Dict{Int64, Float64}}, n_resources::
         plot!(p, data_points, label=algo, markershape=:auto, yaxis=:log)
     end
 
-    outfile = THIS_DIR * "/results.png"
+    outfile = THIS_DIR * "/benchmark_n_resources.png"
     savefig(p, outfile)
 end
 
 function main()
     N_SAMPLES = 50
-    N_RESOURCES_MAX = 30
+    N_RESOURCES_MAX = 0
 
     rv = [0.1, 0.4, 0.5]
     cost = [0.0, 1.0, 2.0]
