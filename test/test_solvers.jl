@@ -37,13 +37,39 @@ end
     @test sol_3.cost == Inf
     @test sol_4.cost == Inf
 
-    # aco
-    args = ACOArgs()
+    # bpso_no_cache
+    args = BPSOArgs(; n_particles = 10, n_cycles = 2)
 
-    sol_1 = aco(problems[1], args)
-    sol_2 = aco(problems[2], args)
-    sol_3 = aco(problems[3], args)
-    sol_4 = aco(problems[4], args)
+    sol_1 = bpso_no_cache(problems[1], args)
+    sol_2 = bpso_no_cache(problems[2], args)
+    sol_3 = bpso_no_cache(problems[3], args)
+    sol_4 = bpso_no_cache(problems[4], args)
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
+
+    # bpso_simple_cache
+    args = BPSOArgs(; n_particles = 10, n_cycles = 2)
+
+    sol_1 = bpso_simple_cache(problems[1], args)
+    sol_2 = bpso_simple_cache(problems[2], args)
+    sol_3 = bpso_simple_cache(problems[3], args)
+    sol_4 = bpso_simple_cache(problems[4], args)
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
+
+    # bpso_thread_cache
+    args = BPSOArgs(; n_particles = 10, n_cycles = 2)
+
+    sol_1 = bpso_thread_cache(problems[1], args)
+    sol_2 = bpso_thread_cache(problems[2], args)
+    sol_3 = bpso_thread_cache(problems[3], args)
+    sol_4 = bpso_thread_cache(problems[4], args)
 
     @test sol_1.cost < Inf
     @test sol_2.cost < Inf
@@ -57,6 +83,45 @@ end
     sol_2 = one_plus_one_evo(problems[2], n_steps)
     sol_3 = one_plus_one_evo(problems[3], n_steps)
     sol_4 = one_plus_one_evo(problems[4], n_steps)
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
+
+    # n_thread_evo_no_cache
+    n_steps = 10
+
+    sol_1 = n_thread_evo_no_cache(problems[1], n_steps)
+    sol_2 = n_thread_evo_no_cache(problems[2], n_steps)
+    sol_3 = n_thread_evo_no_cache(problems[3], n_steps)
+    sol_4 = n_thread_evo_no_cache(problems[4], n_steps)
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
+
+    # n_thread_evo_simple_cache
+    n_steps = 10
+
+    sol_1 = n_thread_evo_simple_cache(problems[1], n_steps)
+    sol_2 = n_thread_evo_simple_cache(problems[2], n_steps)
+    sol_3 = n_thread_evo_simple_cache(problems[3], n_steps)
+    sol_4 = n_thread_evo_simple_cache(problems[4], n_steps)
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
+
+    # n_thread_evo_thread_cache
+    n_steps = 10
+
+    sol_1 = n_thread_evo_thread_cache(problems[1], n_steps)
+    sol_2 = n_thread_evo_thread_cache(problems[2], n_steps)
+    sol_3 = n_thread_evo_thread_cache(problems[3], n_steps)
+    sol_4 = n_thread_evo_thread_cache(problems[4], n_steps)
 
     @test sol_1.cost < Inf
     @test sol_2.cost < Inf
