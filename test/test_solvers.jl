@@ -25,7 +25,7 @@ end
     problems = discrete_solver_problems()
 
     # bpso
-    args = BPSOArgs(; n_particles = 10, n_cycles = 2)
+    args = BPSOArgs(; n_particles=10, n_cycles=2)
 
     sol_1 = bpso(problems[1], args)
     sol_2 = bpso(problems[2], args)
@@ -121,85 +121,16 @@ end
     @test sol_4.cost == Inf
 end
 
-@testset "AdjacencyMatrix" begin
-    # constructor
-    ok_matrix = Bool[
-        1 0
-        0 1
-    ]
-    bad_matrix = Bool[
-        1 0 1
-        0 1 0
-    ]
-
-    # valid args
-    mat = AdjacencyMatrix(ok_matrix)
-    @test true
-
-    # invalid args
-    @test_throws ArgumentError AdjacencyMatrix(bad_matrix)
-
-    # getindex
-    for i in eachindex(ok_matrix)
-        @test mat[i] == ok_matrix[i]
-    end
-
-    # creation functions
-    rng = Xoshiro(1)
-    mat = small_world(rng, 5, 2, 0.5)
-    @test size(mat) == (5, 5)
-
-    mat = small_world(5, 2, 0.5)
-    @test size(mat) == (5, 5)
-
-    mat = ring(5)
-    @test size(mat) == (5, 5)
-
-    mat = fully_connected(5)
-    @test size(mat) == (5, 5)
-end
-
 @testset "PropagatingAgent" begin
     problems = discrete_solver_problems()
 
-    HOST = ip"127.0.0.1"
-    PORT = 5555
-    c = Container()
-    c.protocol = TCPProtocol(address = InetAddr(HOST, PORT))
+    host = "127.0.0.1"
+    port = 5555
 
-
-    # agent structure
-    agent = propagating_agent_factory(
-        c,
-        problems[1].resources[1],
-        problems[1].p_target,
-        problems[1].v_target,
-        0.1,
-        0.1,
-    )
-
-    @test agent.best_cost == Inf
-    @test agent.best_agents == [address(agent)]
-
-    # run single agent without neighbors
-    run_agent(agent)
-    @test agent.best_cost == Inf
-    @test agent.best_agents == [address(agent)]
-
-    # run solver logic
-    neigh = AdjacencyMatrix(Bool[
-        0 1 1
-        1 0 1
-        1 1 0
-    ])
-    addr = InetAddr(HOST, PORT)
-    info = 0.5
-    term = 0.5
-
-    sol_1 = propagated_agent_solver(problems[1], neigh, addr, info, term)
-    sol_2 = propagated_agent_solver(problems[2], neigh, addr, info, term)
-    sol_3 = propagated_agent_solver(problems[3], neigh, addr, info, term)
-    sol_4 = propagated_agent_solver(problems[4], neigh, addr, info, term)
+    sol_1 = propagated_agent_solver(problems[1], complete_topology(length(problems[1].resources)), host, port)
+    sol_2 = propagated_agent_solver(problems[2], complete_topology(length(problems[2].resources)), host, port)
+    sol_3 = propagated_agent_solver(problems[3], complete_topology(length(problems[3].resources)), host, port)
+    sol_4 = propagated_agent_solver(problems[4], complete_topology(length(problems[4].resources)), host, port)
 
     @test sol_1.cost < Inf
     @test sol_2.cost < Inf
