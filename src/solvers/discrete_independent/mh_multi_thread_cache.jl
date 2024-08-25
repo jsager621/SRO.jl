@@ -135,12 +135,12 @@ function n_thread_evo_thread_cache(
     thread_bests = [best_cost for _ in 1:Threads.nthreads()]
     thread_vectors = [select_vector for _ in 1:Threads.nthreads()]
 
-    known_combinations = Vector{Vector{Vector{Bool}}}()
-    for _ in 1:Threads.nthreads()
-        push!(known_combinations, Vector{Vector{Bool}}())
+    known_combinations = Vector{Vector{Bool}}()
+    for _ in 1:Threads.nthreads()*n_steps
+        push!(known_combinations, Vector{Bool}())
     end
 
-    for _ = 1:n_steps
+    for s = 1:n_steps
         @sync Threads.@threads for i = 1:Threads.nthreads()
             new_select_vector = zeros(Bool, length(resources))
             for i in eachindex(new_select_vector)
@@ -151,21 +151,14 @@ function n_thread_evo_thread_cache(
                 end
             end
 
-            found = false
-            for i in 1:Threads.nthreads()
-                if new_select_vector in known_combinations[i]
-                    # no way to immprove, skip
-                    found = true
-                    break
-                end
-            end
-
-            if found
-                break
+            if new_select_vector in known_combinations
+                # no way to improve, skip
+                continue
             end
 
             new_cost = sro_target_function(resources[new_select_vector], p_target, v_target)
-            push!(known_combinations[Threads.threadid()], new_select_vector)
+            
+            known_combinations[Threads.threadid() * s] = new_select_vector
 
             if new_cost < best_cost
                 thread_bests[Threads.threadid()] = new_cost
