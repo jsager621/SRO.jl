@@ -62,6 +62,19 @@ end
     @test sol_2.cost < Inf
     @test sol_3.cost == Inf
     @test sol_4.cost == Inf
+
+    # n_thread evo
+    n_steps = 10
+
+    sol_1 = n_thread_evo(problems[1], n_steps)
+    sol_2 = n_thread_evo(problems[2], n_steps)
+    sol_3 = n_thread_evo(problems[3], n_steps)
+    sol_4 = n_thread_evo(problems[4], n_steps)
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
 end
 
 @testset "discrete_optima" begin

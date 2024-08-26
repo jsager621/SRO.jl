@@ -65,7 +65,10 @@ function bpso(
     global_best_position = ones(Bool, length(resources))
     global_best_cost = sro_target_function(resources, p_target, v_target)
 
-    known_combinations = ConcurrentDict{Set{Int64},T}()
+    known_combinations = Vector{Dict{Set{Int64},T}}()
+    for _ in 1:Threads.nthreads()
+        push!(known_combinations, Dict{Set{Int64},T}())
+    end
 
     # velocity update: v(t+1) = w * v(t) + c_particle R1 (local_best - position) + c_global R2 (g_best - position)
     # have to apply this bitwise
@@ -102,14 +105,19 @@ function bpso(
             # evaluate
             eval_new = Inf
             r_set = Set(pos_new)
-            if r_set in keys(known_combinations)
-                eval_new = known_combinations[r_set]
-            else
-                eval_new = sro_target_function(resources[pos_new], p_target, v_target)
-                known_combinations[r_set] = eval_new
+            found = false
+            for t in 1:Threads.nthreads()
+                if r_set in keys(known_combinations[t])
+                    eval_new = known_combinations[t][r_set]
+                    found = true
+                    break
+                end
             end
 
-
+            if !found
+                eval_new = sro_target_function(resources[pos_new], p_target, v_target)
+                known_combinations[Threads.threadid()][r_set] = eval_new
+            end
 
             if eval_new < local_eval
                 particle_best_costs[i] = eval_new
@@ -181,7 +189,7 @@ function aco(
 
     # unlike BPSO, its a vector here because order matters!
     # maps an order of resources to its cutoff (Int64)
-    known_combinations = ConcurrentDict{Vector{Int64}, Int64}()
+    known_combinations = ConcurrentDict{Vector{Int64},Int64}()
 
     for _ = 1:n_runs
         # compute probabilities for this run once
@@ -199,8 +207,8 @@ function aco(
     end
 
     cutoff, solution_cost =
-        _best_set_in_order(resources, sortperm(pheromones, rev = true), p_target, v_target)
-    solution_indices = sortperm(pheromones, rev = true)[1:cutoff]
+        _best_set_in_order(resources, sortperm(pheromones, rev=true), p_target, v_target)
+    solution_indices = sortperm(pheromones, rev=true)[1:cutoff]
 
     return DiscreteSolution(
         problem,
@@ -221,7 +229,7 @@ function _best_ant_solutions!(
     n_ants::Int64,
     p_target::T,
     v_target::Int64,
-    known_combinations::ConcurrentDict{Vector{Int64}, Int64}
+    known_combinations::ConcurrentDict{Vector{Int64},Int64}
 )::Vector{Int64} where {T}
     ant_outputs = Vector{Vector{Int64}}()
     for _ = 1:n_ants
@@ -234,7 +242,7 @@ function _best_ant_solutions!(
             collect(1:length(resources)),
             probabilities,
             length(resources),
-            replace = false,
+            replace=false,
         )
 
         cutoff = -1
@@ -243,7 +251,7 @@ function _best_ant_solutions!(
         else
             cutoff, _ = _best_set_in_order(resources, ant_path, p_target, v_target)
         end
-        
+
         ant_indices = ant_path[1:cutoff]
         for i in ant_indices
             ant_outputs[a_id][i] += 1
@@ -305,21 +313,118 @@ function one_plus_one_evo(
     select_vector = ones(Bool, length(resources))
     p_bit_flip = 1.0 / length(resources)
 
-    for _ = 1:n_steps
-        new_select_vector = zeros(Bool, length(resources))
-        for i in eachindex(new_select_vector)
-            if rand(rng) <= p_bit_flip
-                new_select_vector[i] = !select_vector[i]
-            else
-                new_select_vector[i] = select_vector[i]
+    thread_bests = [best_cost for _ in 1:Threads.nthreads()]
+    thread_vectors = [select_vector for _ in 1:Threads.nthreads()]
+
+    known_combinations = Vector{Vector{Bool}}()
+    for _ in 1:Threads.nthreads()*n_steps
+        push!(known_combinations, Vector{Bool}())
+    end
+    push!(known_combinations, ones(Bool, length(resources)))
+
+    for s = 1:n_steps
+        @sync Threads.@threads for i = 1:Threads.nthreads()
+            new_select_vector = zeros(Bool, length(resources))
+            for i in eachindex(new_select_vector)
+                if rand(rng) <= p_bit_flip
+                    new_select_vector[i] = !select_vector[i]
+                else
+                    new_select_vector[i] = select_vector[i]
+                end
+            end
+
+            if new_select_vector in known_combinations
+                # no way to improve, skip
+                continue
+            end
+
+            new_cost = sro_target_function(resources[new_select_vector], p_target, v_target)
+
+            known_combinations[Threads.threadid()*s] = new_select_vector
+
+            if new_cost < best_cost
+                thread_bests[Threads.threadid()] = new_cost
+                thread_vectors[Threads.threadid()] = new_select_vector
             end
         end
 
-        new_cost = sro_target_function(resources[new_select_vector], p_target, v_target)
+        m, idx = findmin(thread_bests)
+        if m < best_cost
+            best_cost = m
+            select_vector = thread_vectors[idx]
+        end
+    end
 
-        if new_cost < best_cost
-            best_cost = new_cost
-            select_vector = new_select_vector
+    return DiscreteSolution(
+        problem,
+        collect(1:length(resources))[select_vector],
+        resources[select_vector],
+        best_cost,
+    )
+end
+
+
+"""
+1+n_threads evolutionary algorithm.
+Works like [one_plus_one_evo](@Ref) except it computes `Threads.nthreads()`
+recombinations per step.
+"""
+function n_thread_evo(problem::DiscreteProblem, n_steps::Int64)::DiscreteSolution
+    return n_thread_evo(Xoshiro(), problem, n_steps)
+end
+
+function n_thread_evo(
+    rng::AbstractRNG,
+    problem::DiscreteProblem{T},
+    n_steps::Int64,
+)::DiscreteSolution where {T}
+    resources = problem.resources
+    p_target = problem.p_target
+    v_target = problem.v_target
+
+    best_cost = sro_target_function(resources, p_target, v_target)
+    select_vector = ones(Bool, length(resources))
+    p_bit_flip = 1.0 / length(resources)
+
+    thread_bests = [best_cost for _ in 1:Threads.nthreads()]
+    thread_vectors = [select_vector for _ in 1:Threads.nthreads()]
+
+    known_combinations = Vector{Vector{Bool}}()
+    for _ in 1:Threads.nthreads()*n_steps
+        push!(known_combinations, Vector{Bool}())
+    end
+    push!(known_combinations, ones(Bool, length(resources)))
+
+    for s = 1:n_steps
+        @sync Threads.@threads for i = 1:Threads.nthreads()
+            new_select_vector = zeros(Bool, length(resources))
+            for i in eachindex(new_select_vector)
+                if rand(rng) <= p_bit_flip
+                    new_select_vector[i] = !select_vector[i]
+                else
+                    new_select_vector[i] = select_vector[i]
+                end
+            end
+
+            if new_select_vector in known_combinations
+                # no way to improve, skip
+                continue
+            end
+
+            new_cost = sro_target_function(resources[new_select_vector], p_target, v_target)
+
+            known_combinations[Threads.threadid()*s] = new_select_vector
+
+            if new_cost < best_cost
+                thread_bests[Threads.threadid()] = new_cost
+                thread_vectors[Threads.threadid()] = new_select_vector
+            end
+        end
+
+        m, idx = findmin(thread_bests)
+        if m < best_cost
+            best_cost = m
+            select_vector = thread_vectors[idx]
         end
     end
 

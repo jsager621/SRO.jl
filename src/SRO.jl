@@ -44,7 +44,7 @@ include("solvers/discrete_independent/simple_heuristics.jl")
 include("solvers/discrete_independent/distributed.jl")
 export aco, ACOArgs
 export bpso, BPSOArgs
-export one_plus_one_evo
+export one_plus_one_evo, n_thread_evo
 export discrete_optimum, oracle, take_all, random_feasible
 export AdjacencyMatrix, small_world, fully_connected, ring
 export PropagatingAgent, propagating_agent_factory, run_agent, propagated_agent_solver
