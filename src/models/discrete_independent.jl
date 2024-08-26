@@ -52,7 +52,7 @@ function ccdf(r::DiscreteResource{T})::Vector{T} where {T}
     return [1 - n for n in cdf(r)]
 end
 
-function convolve(a::Vector{T}, b::Vector{T}; zero_atol::Float64=0.0001)::Vector{T} where {T<:AbstractFloat}
+function convolve(a::Vector{T}, b::Vector{T}; zero_atol::Float64=0.000001)::Vector{T} where {T<:AbstractFloat}
     n = length(a)
     m = length(b)
 
@@ -66,7 +66,7 @@ function convolve(a::Vector{T}, b::Vector{T}; zero_atol::Float64=0.0001)::Vector
     return filtered
 end
 
-function convolve(vs::Vector{Vector{T}}; zero_atol::Float64=0.0001)::Vector{T} where {T<:AbstractFloat}
+function convolve(vs::Vector{Vector{T}}; zero_atol::Float64=0.000001)::Vector{T} where {T<:AbstractFloat}
     final_length = sum([length(x) for x in vs]) - length(vs) + 1
     paddeds = Vector{Vector{T}}()
     for v in vs
