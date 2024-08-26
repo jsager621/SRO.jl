@@ -139,6 +139,7 @@ function n_thread_evo_thread_cache(
     for _ in 1:Threads.nthreads()*n_steps
         push!(known_combinations, Vector{Bool}())
     end
+    push!(known_combinations, ones(Bool, length(resources)))
 
     for s = 1:n_steps
         @sync Threads.@threads for i = 1:Threads.nthreads()

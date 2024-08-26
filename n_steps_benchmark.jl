@@ -15,7 +15,7 @@ function plot_results(results::Dict{String, Dict{Int64, Float64}}, n_steps::Int6
         plot!(p, data_points, label=algo, markershape=:auto, yaxis=:log)
     end
 
-    outfile = THIS_DIR * "/benchmark_n_steps.png"
+    outfile = THIS_DIR * "/benchmark_n_steps_fast_ones.png"
     savefig(p, outfile)
 end
 
@@ -33,9 +33,9 @@ function main()
     p_target = 0.0
     v_target = 0
 
-    bpso_algos = [bpso_no_cache, bpso_simple_cache, bpso_thread_cache]
-    evo_algos = [n_thread_evo_no_cache, n_thread_evo_simple_cache, n_thread_evo_thread_cache]
-    comp = [one_plus_one_evo]
+    bpso_algos = [bpso_simple_cache, bpso_thread_cache]
+    evo_algos = [n_thread_evo_simple_cache, n_thread_evo_thread_cache]
+    comp = []
 
     #---------------------------------------
     # dummy run everything to remove compile times
