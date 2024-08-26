@@ -52,7 +52,7 @@ function ccdf(r::DiscreteResource{T})::Vector{T} where {T}
     return [1 - n for n in cdf(r)]
 end
 
-function convolve(a::Vector{T}, b::Vector{T})::Vector{T} where {T<:AbstractFloat}
+function convolve(a::Vector{T}, b::Vector{T}; zero_atol::Float64=0.0001)::Vector{T} where {T<:AbstractFloat}
     n = length(a)
     m = length(b)
 
@@ -61,12 +61,12 @@ function convolve(a::Vector{T}, b::Vector{T})::Vector{T} where {T<:AbstractFloat
 
     raw_convolve = ifft(fft(a_pad) .* fft(b_pad))
     reals = [real(x) for x in raw_convolve]
-    filtered = [x < 0 ? T(0.0) : x for x in reals]
+    filtered = [x < 0 || x == Inf || isapprox(x, 0; atol=zero_atol) ? T(0.0) : x for x in reals]
 
     return filtered
 end
 
-function convolve(vs::Vector{Vector{T}})::Vector{T} where {T<:AbstractFloat}
+function convolve(vs::Vector{Vector{T}}; zero_atol::Float64=0.0001)::Vector{T} where {T<:AbstractFloat}
     final_length = sum([length(x) for x in vs]) - length(vs) + 1
     paddeds = Vector{Vector{T}}()
     for v in vs
@@ -76,7 +76,7 @@ function convolve(vs::Vector{Vector{T}})::Vector{T} where {T<:AbstractFloat}
     ffts = [fft(x) for x in paddeds]
     raw_convolve = ifft(reduce((x, y) -> x .* y, ffts))
     reals = [real(x) for x in raw_convolve]
-    filtered = [x < 0 ? T(0.0) : x for x in reals]
+    filtered = [x < 0 || x == Inf || isapprox(x, 0; atol=zero_atol) ? T(0.0) : x for x in reals]
 
     return filtered
 end
@@ -85,7 +85,10 @@ end
 Compute the combined discrete resource of the (independent)
 resources `a` and `b`.
 
-Returns:
+# Warning
+May return undefined results when probabilities get very small.
+
+# Returns
 The combined resource with probability distribution `a.p * b.p` and corresponding
 expected cost.
 """
@@ -110,17 +113,14 @@ function combine(a::DiscreteResource{T}, b::DiscreteResource{T})::DiscreteResour
     #
 
     real_cost = [real(x) for x in weighted_cost]
-    c3 = real_cost ./ f3
+    filtered = [x == Inf || x == -Inf || x == NaN ? T(0.0) : x for x in real_cost]
+    c3 = filtered ./ f3
 
     return DiscreteResource(f3, c3)
 end
 
 """
 Compute the combined discrete resource of a set of independent `resources`.
-
-Returns:
-The combined resource with probability distribution and corresponding
-expected cost.
 """
 function combine(resources::Vector{DiscreteResource{T}})::DiscreteResource{T} where {T}
     if length(resources) == 0
@@ -156,11 +156,11 @@ function combine(resources::Vector{DiscreteResource{T}})::DiscreteResource{T} wh
     sum_fft = reduce((x, y) -> x .+ y, ffts)
     weighted_cost = ifft(sum_fft)
     real_cost = [real(x) for x in weighted_cost]
-    c3 = real_cost ./ f3
+    filtered = [x == Inf || x == -Inf || x == NaN ? T(0.0) : x for x in real_cost]
+    c3 = filtered ./ f3
 
     return DiscreteResource(f3, c3)
 end
-
 #---------------------------------------
 # Problem Definition
 #---------------------------------------

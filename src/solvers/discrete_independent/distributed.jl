@@ -173,13 +173,13 @@ function propagated_agent_solver(
     p_target = problem.p_target
     v_target = problem.v_target
 
-    # if !(size(adjacency_matrix)[1] == length(resources))
-    #     throw(
-    #         ArgumentError(
-    #             "Dimension mismatch between number of resources and adjacency matrix!",
-    #         ),
-    #     )
-    # end
+    if !(nv(topology.graph) == length(resources))
+        throw(
+            ArgumentError(
+                "Dimension mismatch between number of resources and topology!",
+            ),
+        )
+    end
 
     c = create_tcp_container(host, port)
     agents = Vector{PropagatingAgent}()

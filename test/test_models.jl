@@ -42,13 +42,13 @@
     c3 = combine(c1, c2)
 
     expected_cost = [0.0, -1.5, -3.0, -4.5, -6.0]
-    @test isapprox(c3.c, expected_cost; rtol = 0.0000001)
+    @test isapprox(c3.c, expected_cost; rtol=0.0000001)
 
     res_v = [c1, c2, c1, c2]
     c3 = combine(res_v)
     c3_man = combine(combine(combine(c1, c2), c1), c2)
-    @test isapprox(c3.p, c3_man.p; rtol = 0.0000001)
-    @test isapprox(c3.c, c3_man.c; rtol = 0.0000001)
+    @test isapprox(c3.p, c3_man.p; rtol=0.0000001)
+    @test isapprox(c3.c, c3_man.c; rtol=0.0000001)
 
 
     # target function
@@ -69,7 +69,7 @@
 
     # infeasible values
     @test sro_target_function([c1, c2], 0.0, 5) == Inf
-    
+
     # empty set handling
     @test sro_target_function(DiscreteResource{Float64}[], 0.0, 0) == Inf
 end
@@ -107,7 +107,7 @@ end
 @testset "ContinuousResource" begin
     # constructor tests
     not_ok_rv = Normal(5, 5)
-    ok_rv = truncated(Normal(5, 5); lower = 0, upper = 5)
+    ok_rv = truncated(Normal(5, 5); lower=0, upper=5)
     ok_cost(x::Float64)::Float64 = x^2
 
     @test_throws ArgumentError ContinuousResource(not_ok_rv, ok_cost)
@@ -132,7 +132,7 @@ end
 @testset "GaussianCopulaSet" begin
     # constructor
     raw_rvs = [Normal(5, 5), Beta(1.5, 1.5), Weibull(1.5, 1.5)]
-    rvs = [truncated(x; lower = 0, upper = 1) for x in raw_rvs]
+    rvs = [truncated(x; lower=0, upper=1) for x in raw_rvs]
     resources = [ContinuousResource(x, y -> y^2) for x in rvs]
 
     cov_mat = [
