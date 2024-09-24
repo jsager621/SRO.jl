@@ -136,7 +136,7 @@ function run_agent(agent::PropagatingAgent)
     # should be registered now, add own addres to list
     push!(agent.agent_order, address(agent))
     push!(agent.best_msg_sources, address(agent))
-    
+
     # start information propagation
     send_resource_info(agent)
 
@@ -218,7 +218,7 @@ function propagated_agent_solver(
 
     for b in best_agents
         # agent index matches resource index
-        index = findfirst(x->x==b, agent_addresses)
+        index = findfirst(x -> x == b, agent_addresses)
         push!(output_indices, index)
     end
 

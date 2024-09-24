@@ -52,34 +52,119 @@ function ccdf(r::DiscreteResource{T})::Vector{T} where {T}
     return [1 - n for n in cdf(r)]
 end
 
-function convolve(a::Vector{T}, b::Vector{T}; zero_atol::Float64=0.0001)::Vector{T} where {T<:AbstractFloat}
-    n = length(a)
-    m = length(b)
+# function fft_convolve(a::Vector{T}, b::Vector{T}; zero_atol::Float64=0.0001)::Vector{T} where {T<:AbstractFloat}
+#     n = length(a)
+#     m = length(b)
 
-    a_pad = [a; zeros(m - 1)]
-    b_pad = [b; zeros(n - 1)]
+#     a_pad = [a; zeros(m - 1)]
+#     b_pad = [b; zeros(n - 1)]
 
-    raw_convolve = ifft(fft(a_pad) .* fft(b_pad))
-    reals = [real(x) for x in raw_convolve]
-    filtered = [x < 0 || x == Inf || isapprox(x, 0; atol=zero_atol) ? T(0.0) : x for x in reals]
+#     raw_convolve = ifft(fft(a_pad) .* fft(b_pad))
+#     reals = [real(x) for x in raw_convolve]
+#     filtered = [x < 0 || x == Inf || isapprox(x, 0; atol=zero_atol) ? T(0.0) : x for x in reals]
 
-    return filtered
-end
+#     return filtered
+# end
 
-function convolve(vs::Vector{Vector{T}}; zero_atol::Float64=0.0001)::Vector{T} where {T<:AbstractFloat}
-    final_length = sum([length(x) for x in vs]) - length(vs) + 1
-    paddeds = Vector{Vector{T}}()
-    for v in vs
-        push!(paddeds, [v; zeros(T, final_length - length(v))])
+# function fft_convolve(vs::Vector{Vector{T}}; zero_atol::Float64=0.0001)::Vector{T} where {T<:AbstractFloat}
+#     final_length = sum([length(x) for x in vs]) - length(vs) + 1
+#     paddeds = Vector{Vector{T}}()
+#     for v in vs
+#         push!(paddeds, [v; zeros(T, final_length - length(v))])
+#     end
+
+#     ffts = [fft(x) for x in paddeds]
+#     raw_convolve = ifft(reduce((x, y) -> x .* y, ffts))
+#     reals = [real(x) for x in raw_convolve]
+#     filtered = [x < 0 || x == Inf || isapprox(x, 0; atol=zero_atol) ? T(0.0) : x for x in reals]
+
+#     return filtered
+# end
+
+function convolve(a::Vector{T}, b::Vector{T})::Vector{T} where {T<:AbstractFloat}
+    m = length(a)
+    n = length(b)
+    c = zeros(T, m + n - 1)
+    @inbounds @simd for j = 1:m
+        @inbounds @simd for k = 1:n
+            c[j+k-1] += a[j] * b[k]
+        end
     end
-
-    ffts = [fft(x) for x in paddeds]
-    raw_convolve = ifft(reduce((x, y) -> x .* y, ffts))
-    reals = [real(x) for x in raw_convolve]
-    filtered = [x < 0 || x == Inf || isapprox(x, 0; atol=zero_atol) ? T(0.0) : x for x in reals]
-
-    return filtered
+    return c
 end
+
+function convolve(vs::Vector{Vector{T}})::Vector{T} where {T<:AbstractFloat}
+    return reduce((x, y) -> convolve(x, y), vs)
+end
+
+
+# function fft_combine(a::DiscreteResource{T}, b::DiscreteResource{T})::DiscreteResource{T} where {T}
+#     f3 = convolve(a.p, b.p)
+
+#     n = length(a)
+#     m = length(b)
+
+#     f1_pad = [a.p; zeros(m - 1)]
+#     f2_pad = [b.p; zeros(n - 1)]
+
+#     c1_pad = [a.c; zeros(m - 1)]
+#     c2_pad = [b.c; zeros(n - 1)]
+
+#     w1 = f2_pad .* c2_pad
+#     w2 = f1_pad .* c1_pad
+
+#     weighted_cost = ifft((fft(f1_pad) .* fft(w1)) .+ (fft(f2_pad) .* fft(w2)))
+#     # 
+#     # ifft(fft(f1 .* (f2 .* c2)) .+ fft(f2 .* (f1 .* c1))) ./ f3
+#     #
+
+#     real_cost = [real(x) for x in weighted_cost]
+#     filtered = [x == Inf || x == -Inf || x == NaN ? T(0.0) : x for x in real_cost]
+#     c3 = filtered ./ f3
+
+#     return DiscreteResource(f3, c3)
+# end
+
+
+# function fft_combine(resources::Vector{DiscreteResource{T}})::DiscreteResource{T} where {T}
+#     if length(resources) == 0
+#         return ZERO_RESOURCE
+#     end
+
+#     if length(resources) == 1
+#         return resources[1]
+#     end
+
+#     final_length = sum([length(x) for x in resources]) - length(resources) + 1
+#     f3 = convolve([res.p for res in resources])
+
+#     f_paddeds = Vector{Vector{T}}()
+#     c_paddeds = Vector{Vector{T}}()
+#     weights = Vector{Vector{T}}()
+
+#     for res in resources
+#         new_f_pad = [res.p; zeros(T, final_length - length(res))]
+#         new_c_pad = [res.c; zeros(T, final_length - length(res))]
+#         push!(f_paddeds, new_f_pad)
+#         push!(c_paddeds, new_c_pad)
+#         push!(weights, new_f_pad .* new_c_pad)
+#     end
+
+#     f_pads_ffted = [fft(x) for x in f_paddeds]
+#     ffts = Vector{Vector{ComplexF64}}()
+#     for i in eachindex(weights)
+#         # fft of weight * remaining rvs multiplied up
+#         push!(ffts, fft(weights[i]) .* reduce((x, y) -> x .* y, f_pads_ffted[Not(i)]))
+#     end
+
+#     sum_fft = reduce((x, y) -> x .+ y, ffts)
+#     weighted_cost = ifft(sum_fft)
+#     real_cost = [real(x) for x in weighted_cost]
+#     filtered = [x == Inf || x == -Inf || x == NaN ? T(0.0) : x for x in real_cost]
+#     c3 = filtered ./ f3
+
+#     return DiscreteResource(f3, c3)
+# end
 
 """
 Compute the combined discrete resource of the (independent)
@@ -95,27 +180,17 @@ expected cost.
 function combine(a::DiscreteResource{T}, b::DiscreteResource{T})::DiscreteResource{T} where {T}
     f3 = convolve(a.p, b.p)
 
-    n = length(a)
-    m = length(b)
+    m = length(a)
+    n = length(b)
+    c3 = zeros(T, m + n - 1)
 
-    f1_pad = [a.p; zeros(m - 1)]
-    f2_pad = [b.p; zeros(n - 1)]
+    @inbounds @simd for j = 1:m
+        @inbounds @simd for k = 1:n
+            c3[j+k-1] += a.p[j] * b.p[k] * (a.c[j] + b.c[k])
+        end
+    end
 
-    c1_pad = [a.c; zeros(m - 1)]
-    c2_pad = [b.c; zeros(n - 1)]
-
-    w1 = f2_pad .* c2_pad
-    w2 = f1_pad .* c1_pad
-
-    weighted_cost = ifft((fft(f1_pad) .* fft(w1)) .+ (fft(f2_pad) .* fft(w2)))
-    # 
-    # ifft(fft(f1 .* (f2 .* c2)) .+ fft(f2 .* (f1 .* c1))) ./ f3
-    #
-
-    real_cost = [real(x) for x in weighted_cost]
-    filtered = [x == Inf || x == -Inf || x == NaN ? T(0.0) : x for x in real_cost]
-    c3 = filtered ./ f3
-
+    c3 = c3 ./ f3
     return DiscreteResource(f3, c3)
 end
 
@@ -131,36 +206,10 @@ function combine(resources::Vector{DiscreteResource{T}})::DiscreteResource{T} wh
         return resources[1]
     end
 
-    final_length = sum([length(x) for x in resources]) - length(resources) + 1
-    f3 = convolve([res.p for res in resources])
-
-    f_paddeds = Vector{Vector{T}}()
-    c_paddeds = Vector{Vector{T}}()
-    weights = Vector{Vector{T}}()
-
-    for res in resources
-        new_f_pad = [res.p; zeros(T, final_length - length(res))]
-        new_c_pad = [res.c; zeros(T, final_length - length(res))]
-        push!(f_paddeds, new_f_pad)
-        push!(c_paddeds, new_c_pad)
-        push!(weights, new_f_pad .* new_c_pad)
-    end
-
-    f_pads_ffted = [fft(x) for x in f_paddeds]
-    ffts = Vector{Vector{ComplexF64}}()
-    for i in eachindex(weights)
-        # fft of weight * remaining rvs multiplied up
-        push!(ffts, fft(weights[i]) .* reduce((x, y) -> x .* y, f_pads_ffted[Not(i)]))
-    end
-
-    sum_fft = reduce((x, y) -> x .+ y, ffts)
-    weighted_cost = ifft(sum_fft)
-    real_cost = [real(x) for x in weighted_cost]
-    filtered = [x == Inf || x == -Inf || x == NaN ? T(0.0) : x for x in real_cost]
-    c3 = filtered ./ f3
-
-    return DiscreteResource(f3, c3)
+    return reduce((x, y) -> combine(x, y), resources)
 end
+
+
 #---------------------------------------
 # Problem Definition
 #---------------------------------------
