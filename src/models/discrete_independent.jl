@@ -93,6 +93,7 @@ function convolve(a::Vector{T}, b::Vector{T})::Vector{T} where {T<:AbstractFloat
     return c
 end
 
+
 function convolve(vs::Vector{Vector{T}})::Vector{T} where {T<:AbstractFloat}
     return reduce((x, y) -> convolve(x, y), vs)
 end
