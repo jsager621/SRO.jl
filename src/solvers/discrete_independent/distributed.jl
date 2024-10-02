@@ -1,6 +1,3 @@
-using Mango
-using Graphs
-
 @agent struct PropagatingAgent
     base_resource::DiscreteResource{Float64}
     aggregate_resource::DiscreteResource{Float64}

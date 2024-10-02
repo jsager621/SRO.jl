@@ -132,6 +132,17 @@ end
     @test sol_2.cost < Inf
     @test sol_3.cost == Inf
     @test sol_4.cost == Inf
+
+    # subset_size_sampling
+    sol_1 = subset_size_sampling(problems[1], 5)
+    sol_2 = subset_size_sampling(problems[2], 5)
+    sol_3 = subset_size_sampling(problems[3], 5)
+    sol_4 = subset_size_sampling(problems[4], 5)
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
 end
 
 @testset "PropagatingAgent" begin

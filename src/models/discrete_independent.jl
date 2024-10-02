@@ -1,6 +1,3 @@
-using GenericFFT
-using InvertedIndices
-using Random
 
 #---------------------------------------
 # Resource Definition and Functions
