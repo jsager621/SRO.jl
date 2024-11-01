@@ -313,45 +313,30 @@ function one_plus_one_evo(
     select_vector = ones(Bool, length(resources))
     p_bit_flip = 1.0 / length(resources)
 
-    thread_bests = [best_cost for _ in 1:Threads.nthreads()]
-    thread_vectors = [select_vector for _ in 1:Threads.nthreads()]
-
     known_combinations = Vector{Vector{Bool}}()
-    for _ in 1:Threads.nthreads()*n_steps
-        push!(known_combinations, Vector{Bool}())
-    end
     push!(known_combinations, ones(Bool, length(resources)))
 
     for s = 1:n_steps
-        @sync Threads.@threads for i = 1:Threads.nthreads()
-            new_select_vector = zeros(Bool, length(resources))
-            for i in eachindex(new_select_vector)
-                if rand(rng) <= p_bit_flip
-                    new_select_vector[i] = !select_vector[i]
-                else
-                    new_select_vector[i] = select_vector[i]
-                end
-            end
-
-            if new_select_vector in known_combinations
-                # no way to improve, skip
-                continue
-            end
-
-            new_cost = sro_target_function(resources[new_select_vector], p_target, v_target)
-
-            known_combinations[Threads.threadid()*s] = new_select_vector
-
-            if new_cost < best_cost
-                thread_bests[Threads.threadid()] = new_cost
-                thread_vectors[Threads.threadid()] = new_select_vector
+        new_select_vector = zeros(Bool, length(resources))
+        for i in eachindex(new_select_vector)
+            if rand(rng) <= p_bit_flip
+                new_select_vector[i] = !select_vector[i]
+            else
+                new_select_vector[i] = select_vector[i]
             end
         end
 
-        m, idx = findmin(thread_bests)
-        if m < best_cost
-            best_cost = m
-            select_vector = thread_vectors[idx]
+        if new_select_vector in known_combinations
+            # no way to improve, skip
+            continue
+        end
+
+        new_cost = sro_target_function(resources[new_select_vector], p_target, v_target)
+        push!(known_combinations, new_select_vector)
+
+        if new_cost < best_cost
+            best_cost = new_cost
+            select_vector = new_select_vector
         end
     end
 
@@ -436,6 +421,92 @@ function n_thread_evo(
     )
 end
 
+function discrete_power_law(n::Int64, β::Float64)::Vector{Float64}
+    c = 0
+    for i = 1:n
+        c += i^(-β)
+    end
+    
+    return [c^(-1) * α^-β for α in 1:n]
+end
 
-# TODO: μ + 1 evo
-# TODO: 1 + 1 heavy tail evo
+"""
+One plus one evolutionary algorithm with heavy tail distribution.
+
+Adapted from Neumann et al.: https://arxiv.org/pdf/2204.05597
+
+Starts with all resources as the starting solution.
+In each step the current solution gets modified by randomly flipping the selection bits.
+The probability to flip a bit is given by the power law distribution described 
+by Doerr et al.: https://arxiv.org/pdf/1703.03334: 
+    - Pr[X=α] = (C^β_n/2)^-1 α^-β
+    with C^β_n/2 := ∑_{i=1}^{n/2} i^-β
+
+After `n_steps` the best solution found so far is returned.
+"""
+function one_plus_one_heavy_tail(problem::DiscreteProblem, n_steps::Int64, β::Float64)::DiscreteSolution
+    return one_plus_one_heavy_tail(Xoshiro(), problem, n_steps, β)
+end
+
+function one_plus_one_heavy_tail(
+    rng::AbstractRNG,
+    problem::DiscreteProblem{T},
+    n_steps::Int64,
+    β::Float64
+)::DiscreteSolution where {T}
+    resources = problem.resources
+    p_target = problem.p_target
+    v_target = problem.v_target
+
+    best_cost = sro_target_function(resources, p_target, v_target)
+    select_vector = ones(Bool, length(resources))
+    
+
+    known_combinations = Vector{Vector{Bool}}()
+    push!(known_combinations, ones(Bool, length(resources)))
+
+    power_dist = discrete_power_law(length(resources), β)
+
+    for s = 1:n_steps
+        r_theta = rand(rng)
+        theta = 1
+        for i in eachindex(power_dist)
+            if r_theta <= sum(power_dist[1:i])
+                theta = i
+                break
+            end
+        end
+
+        # p_bit_flip changes according to the power law distribution
+        p_bit_flip = theta / length(resources)
+        
+        new_select_vector = zeros(Bool, length(resources))
+        for i in eachindex(new_select_vector)
+            if rand(rng) <= p_bit_flip
+                new_select_vector[i] = !select_vector[i]
+            else
+                new_select_vector[i] = select_vector[i]
+            end
+        end
+
+        if new_select_vector in known_combinations
+            # no way to improve, skip
+            continue
+        end
+
+        new_cost = sro_target_function(resources[new_select_vector], p_target, v_target)
+        push!(known_combinations, new_select_vector)
+
+        if new_cost < best_cost
+            best_cost = new_cost
+            select_vector = new_select_vector
+        end
+    end
+
+    return DiscreteSolution(
+        problem,
+        collect(1:length(resources))[select_vector],
+        resources[select_vector],
+        best_cost,
+    )
+end

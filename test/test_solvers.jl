@@ -75,6 +75,19 @@ end
     @test sol_2.cost < Inf
     @test sol_3.cost == Inf
     @test sol_4.cost == Inf
+
+    # one plus one heavy tail
+    n_steps = 10
+
+    sol_1 = one_plus_one_heavy_tail(problems[1], n_steps, 1.5)
+    sol_2 = one_plus_one_heavy_tail(problems[2], n_steps, 1.5)
+    sol_3 = one_plus_one_heavy_tail(problems[3], n_steps, 1.5)
+    sol_4 = one_plus_one_heavy_tail(problems[4], n_steps, 1.5)
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
 end
 
 @testset "discrete_optima" begin
@@ -161,12 +174,6 @@ end
     @test sol_3.cost == Inf
     @test sol_4.cost == Inf
 end
-
-# function blackboard_agent_solver(
-#     problem::DiscreteProblem,
-#     n_res_per_agent::Int64,
-#     max_cycles::Int64
-# )::DiscreteSolution
 
 @testset "BlackBoardSolver" begin
     problems = discrete_solver_problems()
