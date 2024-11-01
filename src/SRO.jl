@@ -52,5 +52,6 @@ export bpso, BPSOArgs
 export one_plus_one_evo, n_thread_evo
 export discrete_optimum, oracle, take_all, random_feasible, subset_size_sampling
 export PropagatingAgent, propagating_agent_factory, run_agent, propagated_agent_solver
+export Blackboard, BlackboardAgent, blackboard_agent_solver
 
 end

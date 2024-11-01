@@ -161,3 +161,23 @@ end
     @test sol_3.cost == Inf
     @test sol_4.cost == Inf
 end
+
+# function blackboard_agent_solver(
+#     problem::DiscreteProblem,
+#     n_res_per_agent::Int64,
+#     max_cycles::Int64
+# )::DiscreteSolution
+
+@testset "BlackBoardSolver" begin
+    problems = discrete_solver_problems()
+
+    sol_1 = blackboard_agent_solver(problems[1], 2, 4)
+    sol_2 = blackboard_agent_solver(problems[2], 2, 4)
+    sol_3 = blackboard_agent_solver(problems[3], 2, 4)
+    sol_4 = blackboard_agent_solver(problems[4], 2, 4)
+
+    @test sol_1.cost < Inf
+    @test sol_2.cost < Inf
+    @test sol_3.cost == Inf
+    @test sol_4.cost == Inf
+end

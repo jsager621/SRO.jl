@@ -435,3 +435,7 @@ function n_thread_evo(
         best_cost,
     )
 end
+
+
+# TODO: μ + 1 evo
+# TODO: 1 + 1 heavy tail evo

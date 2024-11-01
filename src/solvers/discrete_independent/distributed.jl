@@ -1,3 +1,5 @@
+TYPE_FIELD = "type"
+
 @agent struct PropagatingAgent
     base_resource::DiscreteResource{Float64}
     aggregate_resource::DiscreteResource{Float64}
@@ -34,7 +36,6 @@ function propagating_agent_factory(
     return agent
 end
 
-TYPE_FIELD = "type"
 RESOURCE_MESSAGE_TYPE = "resource_message"
 struct ResourceMessage{T<:AbstractFloat}
     source::AgentAddress
@@ -220,6 +221,190 @@ function propagated_agent_solver(
     end
 
     return DiscreteSolution(
+        problem,
+        output_indices,
+        resources[output_indices],
+        best_cost
+    )
+end
+
+#--------------------------------------------------------------------
+#--------------------------------------------------------------------
+#--------------------------------------------------------------------
+
+mutable struct Blackboard
+    contributions::Dict{Int64, DiscreteResource{Float64}}
+    current_solution::DiscreteResource
+    p_target::Float64
+    v_target::Int64
+end
+
+
+mutable struct BlackboardAgent
+    number::Int64
+    resources::Vector{DiscreteResource{Float64}}
+    best_combinations::Union{Vector{DiscreteResource{Float64}}, Nothing}
+    combination_indices::Vector{Vector{Int64}}
+    contributed_indices::Vector{Int64}
+end
+
+"""
+Establish the best subset of each size within the BlackboardAgent as ordered by `eval_function`.
+Subset evaluation gets MINIMIZED for each subset size.
+"""
+function compute_local_combinations!(agent::BlackboardAgent, eval_function::Function)
+    # iterate powerset
+    # establish best convolved resources in local set from size 0 to n_resources
+    resources = agent.resources
+    indices = collect(1:length(resources))
+
+    length_sets = Vector{Vector{Int64}}()
+    length_evals = Vector{Float64}()
+
+    for _ in 1:length(resources)
+        push!(length_evals, Inf)
+        push!(length_sets, Bool[])
+    end
+
+    for subset in collect(powerset(indices, 1))
+        idx = length(subset)
+        eval = eval_function(combine(resources[subset]))
+        if eval < length_evals[idx]
+            length_evals[idx] = eval
+            length_sets[idx] = subset
+        end
+    end
+
+    bc = Vector{DiscreteResource}()
+    for s in length_sets
+        push!(bc, combine(resources[s]))
+        push!(agent.combination_indices, s)
+    end
+
+    agent.best_combinations = bc
+end
+
+function try_improve!(bb::Blackboard, agent::BlackboardAgent)
+    contributions = bb.contributions
+    current_solution = bb.current_solution
+    p_target = bb.p_target
+    v_target = bb.v_target
+
+    # check if any of our selections can improve what is on the blackboard
+    other_resources = Vector{DiscreteResource{Float64}}()
+    my_resource = ZERO_RESOURCE
+
+    for k in keys(contributions)
+        if k != agent.number
+            push!(other_resources, contributions[k])
+        end
+
+        if k == agent.number
+            my_resource = contributions[k]
+        end
+    end
+
+    others_combined = combine(other_resources)
+    current_eval = sro_target_function(current_solution, p_target, v_target)
+    any_feasible = false
+    reply_resource = ZERO_RESOURCE
+
+    for res in agent.best_combinations
+        combined_res = combine([others_combined, res])
+        this_eval = sro_target_function(combined_res, p_target, v_target)
+        if this_eval < Inf
+            any_feasible = true
+        end
+
+        if this_eval < current_eval
+            current_eval = this_eval
+            reply_resource = res
+            bb.current_solution = combined_res
+        end
+    end
+
+    if !any_feasible
+        reply_resource = agent.best_combinations[end]
+    end
+    bb.contributions[agent.number] = reply_resource
+
+    # return if we actually did anything
+    return my_resource == reply_resource
+end
+
+function expected_cost(res::DiscreteResource)
+    return sum([res.c[i] * res.p[i] for i in eachindex(res.c)])
+end
+
+function blackboard_agent_solver(
+    problem::DiscreteProblem,
+    n_res_per_agent::Int64,
+    max_cycles::Int64
+)::DiscreteSolution
+
+resources = problem.resources
+p_target = problem.p_target
+v_target = problem.v_target
+n_resources = length(resources)
+
+# determine n_agents
+# set up agents with n_res_per_agent
+n_agents = ceil(n_resources / n_res_per_agent)
+
+agents = Vector{BlackboardAgent}()
+
+for i in 1:n_agents
+    start::Int64 = (1 + n_res_per_agent * (i-1))
+    stop::Int64 = min(start + n_res_per_agent, n_resources + 1) - 1
+
+    push!(
+        agents,
+        BlackboardAgent(
+            i,
+            resources[start:stop],
+            nothing,
+            Vector{Vector{Int64}}(),
+            Int64[]
+        )
+    )
+end
+
+# init blackboard
+bb = Blackboard(
+    Dict{Int64, DiscreteResource}(),
+    ZERO_RESOURCE,
+    p_target,
+    v_target
+)
+
+# init agents
+for a in agents
+    compute_local_combinations!(a, expected_cost)
+end
+
+# run try_improve cyclically up to max_cycles
+for _ in 1:max_cycles
+    any_changed = false
+
+    for a in agents
+        if try_improve!(bb, a)
+            any_changed = true
+        end
+    end
+
+    if !any_changed
+        break
+    end
+end
+
+output_indices = Int64[]
+
+for a in agents
+    output_indices = vcat(output_indices, a.contributed_indices .+ (n_res_per_agent * (a.number -1)))
+end
+best_cost = sro_target_function(bb.current_solution, p_target, v_target)
+
+return DiscreteSolution(
         problem,
         output_indices,
         resources[output_indices],

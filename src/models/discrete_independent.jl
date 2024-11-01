@@ -314,3 +314,12 @@ function sro_target_function(
     # set is feasible
     return sum_resource.c[target_index]
 end
+
+
+function sro_target_function(
+    resource::DiscreteResource{T},
+    p_target::T,
+    v_target::Int64,
+)::T where {T}
+    return sro_target_function([resource], p_target, v_target)
+end
