@@ -465,7 +465,7 @@ function one_plus_one_heavy_tail(
     known_combinations = Vector{Vector{Bool}}()
     push!(known_combinations, ones(Bool, length(resources)))
 
-    power_dist = discrete_power_law(length(resources), β)
+    power_dist = discrete_power_law(length(resources) ÷ 2, β)
 
     for s = 1:n_steps
         r_theta = rand(rng)
