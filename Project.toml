@@ -1,7 +1,7 @@
 name = "SRO"
 uuid = "51442a77-0e55-4fa2-ad6a-e629eb677da6"
 authors = ["Jens Sager <jens.sager@uni-oldenburg.de>"]
-repo = "https://github.com/jsagerOffis/SRO"
+repo = "https://github.com/jsager621/SRO"
 version = "0.1.0"
 
 [deps]
